@@ -1,5 +1,6 @@
 package com.mysns.main.graphql
 
+import com.mysns.main.auth.currentUser
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.User
 import com.mysns.main.graphql.stub.InMemoryPostStore
@@ -16,7 +17,10 @@ class UserController(
 ) {
 
     @QueryMapping
-    fun me(): User? = userStore.first()
+    fun me(): User? {
+        val current = currentUser() ?: return null
+        return userStore.findById(current.userId)
+    }
 
     @QueryMapping
     fun user(@Argument id: String): User? = userStore.findById(id.toLong())

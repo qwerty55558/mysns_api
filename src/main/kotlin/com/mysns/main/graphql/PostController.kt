@@ -1,5 +1,6 @@
 package com.mysns.main.graphql
 
+import com.mysns.main.auth.requireCurrentUser
 import com.mysns.main.graphql.model.CreatePostInput
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.User
@@ -10,6 +11,8 @@ import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.MutationMapping
 import org.springframework.graphql.data.method.annotation.QueryMapping
 import org.springframework.graphql.data.method.annotation.SchemaMapping
+import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
 
 @Controller
@@ -26,14 +29,22 @@ class PostController(
         postStore.feed(limit, offset)
 
     @MutationMapping
+    @PreAuthorize("isAuthenticated()")
     fun createPost(@Argument input: CreatePostInput): Post {
-        // Stage 1 stub: author is hardcoded. Stage 2 will read from SecurityContext.
-        val authorId = userStore.first()?.id ?: error("no seed user")
-        return postStore.create(authorId, input.content)
+        val current = requireCurrentUser()
+        return postStore.create(current.userId, input.content)
     }
 
     @MutationMapping
-    fun deletePost(@Argument id: String): Boolean = postStore.delete(id.toLong())
+    @PreAuthorize("isAuthenticated()")
+    fun deletePost(@Argument id: String): Boolean {
+        val current = requireCurrentUser()
+        val post = postStore.findById(id.toLong()) ?: return false
+        if (post.authorId != current.userId) {
+            throw AccessDeniedException("not the author of this post")
+        }
+        return postStore.delete(id.toLong())
+    }
 
     @BatchMapping(typeName = "Post", field = "author")
     fun author(posts: List<Post>): Map<Post, User> {
