@@ -1,0 +1,49 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin / Java
+*.class
+hs_err_pid*
+replay_pid*
+
+# IDE - IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# IDE - VS Code
+.vscode/
+
+# IDE - Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets / Environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Claude Code
+.claude/
+CLAUDE.local.md
+
+# Logs
+*.log
+logs/
+
+# Test / Coverage
+.gradle-test-kit/
+test-output/
+coverage/

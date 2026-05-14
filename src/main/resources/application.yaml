@@ -1,0 +1,30 @@
+mysns:
+  cors:
+    allowed-origins: http://localhost:3000
+
+spring:
+  application:
+    name: mysns
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+    schema:
+      printer:
+        enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  level:
+    org.springframework.graphql: INFO
