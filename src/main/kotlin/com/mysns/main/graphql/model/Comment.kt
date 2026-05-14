@@ -2,13 +2,11 @@ package com.mysns.main.graphql.model
 
 import java.time.OffsetDateTime
 
-data class Post(
+data class Comment(
     val id: Long,
     val content: String,
     val authorId: Long,
+    val postId: Long,
     val createdAt: OffsetDateTime,
     val updatedAt: OffsetDateTime? = null,
-    val imageUrls: List<String> = emptyList(),
-    val tag: String? = null,
-    val shareCount: Int = 0,
 )
