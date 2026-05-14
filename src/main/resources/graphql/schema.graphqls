@@ -10,6 +10,7 @@ type Query {
 type Mutation {
     createPost(input: CreatePostInput!): Post!
     deletePost(id: ID!): Boolean!
+    login(input: LoginInput!): AuthPayload!
 }
 
 type User {
@@ -32,6 +33,16 @@ type Post {
     commentCount: Int!
 }
 
+type AuthPayload {
+    accessToken: String!
+    user: User!
+}
+
 input CreatePostInput {
     content: String!
+}
+
+input LoginInput {
+    username: String!
+    password: String!
 }
