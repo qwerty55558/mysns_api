@@ -3,13 +3,38 @@ scalar DateTime
 type Query {
     me: User
     user(id: ID!): User
+    userByUsername(username: String!): User
     post(id: ID!): Post
     feed(limit: Int! = 20, offset: Int! = 0): [Post!]!
+    bookmarks(limit: Int! = 20, offset: Int! = 0): [Post!]!
 }
 
 type Mutation {
+    # Auth
+    login(input: LoginInput!): AuthPayload!
+
+    # Post
     createPost(input: CreatePostInput!): Post!
+    updatePost(id: ID!, input: UpdatePostInput!): Post!
     deletePost(id: ID!): Boolean!
+
+    # Post interactions
+    likePost(postId: ID!): Post!
+    unlikePost(postId: ID!): Post!
+    bookmarkPost(postId: ID!): Post!
+    unbookmarkPost(postId: ID!): Post!
+    sharePost(postId: ID!): Post!
+
+    # Comment
+    addComment(input: AddCommentInput!): Comment!
+    updateComment(id: ID!, content: String!): Comment!
+    deleteComment(id: ID!): Boolean!
+    likeComment(id: ID!): Comment!
+    unlikeComment(id: ID!): Comment!
+
+    # Follow
+    followUser(id: ID!): User!
+    unfollowUser(id: ID!): User!
 }
 
 type User {
@@ -17,10 +42,14 @@ type User {
     username: String!
     displayName: String!
     bio: String
+    avatarUrl: String
     createdAt: DateTime!
-    posts(limit: Int! = 20, offset: Int! = 0): [Post!]!
+    postCount: Int!
     followerCount: Int!
     followingCount: Int!
+    viewerIsFollowing: Boolean!
+    posts(limit: Int! = 20, offset: Int! = 0): [Post!]!
+    bookmarkedPosts(limit: Int! = 20, offset: Int! = 0): [Post!]!
 }
 
 type Post {
@@ -28,10 +57,51 @@ type Post {
     content: String!
     author: User!
     createdAt: DateTime!
+    updatedAt: DateTime
+    imageUrls: [String!]!
+    tag: String
     likeCount: Int!
     commentCount: Int!
+    shareCount: Int!
+    viewerHasLiked: Boolean!
+    viewerHasBookmarked: Boolean!
+    comments(limit: Int! = 20, offset: Int! = 0): [Comment!]!
+    likedBy(limit: Int! = 20, offset: Int! = 0): [User!]!
+}
+
+type Comment {
+    id: ID!
+    content: String!
+    author: User!
+    post: Post!
+    createdAt: DateTime!
+    updatedAt: DateTime
+    likeCount: Int!
+    viewerHasLiked: Boolean!
+}
+
+type AuthPayload {
+    accessToken: String!
+    user: User!
+}
+
+input LoginInput {
+    username: String!
+    password: String!
 }
 
 input CreatePostInput {
+    content: String!
+    imageUrls: [String!]
+    tag: String
+}
+
+input UpdatePostInput {
+    content: String
+    tag: String
+}
+
+input AddCommentInput {
+    postId: ID!
     content: String!
 }

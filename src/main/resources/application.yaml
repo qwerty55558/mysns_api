@@ -1,4 +1,9 @@
 mysns:
+  security:
+    dev-mode: true
+  jwt:
+    secret: dev-only-secret-please-replace-in-production-must-be-at-least-256-bits-long-padding
+    access-ttl: 15m
   cors:
     allowed-origins: http://localhost:3000
 

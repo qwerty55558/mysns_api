@@ -8,4 +8,5 @@ data class User(
     val displayName: String,
     val bio: String?,
     val createdAt: OffsetDateTime,
+    val avatarUrl: String? = null,
 )
