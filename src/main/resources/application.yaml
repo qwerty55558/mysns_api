@@ -10,6 +10,22 @@ mysns:
 spring:
   application:
     name: mysns
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mysns}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+        generate_statistics: true
+    open-in-view: false
+    show-sql: false
   graphql:
     graphiql:
       enabled: true
@@ -33,3 +49,7 @@ management:
 logging:
   level:
     org.springframework.graphql: INFO
+    # N+1 가시성 — 개발 단계에서만 SQL 로깅. 운영에서는 WARN 이상으로.
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.hibernate.stat: DEBUG

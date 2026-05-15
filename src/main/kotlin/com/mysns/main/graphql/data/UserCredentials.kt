@@ -1,4 +1,4 @@
-package com.mysns.main.graphql.stub
+package com.mysns.main.graphql.data
 
 data class UserCredentials(
     val userId: Long,

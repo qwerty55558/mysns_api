@@ -26,8 +26,8 @@ type Mutation {
     sharePost(postId: ID!): Post!
 
     # Comment
-    addComment(input: AddCommentInput!): Comment!
-    updateComment(id: ID!, content: String!): Comment!
+    addComment(input: CreateCommentInput!): Comment!
+    updateComment(id: ID!, input: UpdateCommentInput!): Comment!
     deleteComment(id: ID!): Boolean!
     likeComment(id: ID!): Comment!
     unlikeComment(id: ID!): Comment!
@@ -60,13 +60,29 @@ type Post {
     updatedAt: DateTime
     imageUrls: [String!]!
     tag: String
+    amount: Int
+    category: PostCategory
     likeCount: Int!
     commentCount: Int!
     shareCount: Int!
     viewerHasLiked: Boolean!
     viewerHasBookmarked: Boolean!
+    previewComment: Comment
     comments(limit: Int! = 20, offset: Int! = 0): [Comment!]!
     likedBy(limit: Int! = 20, offset: Int! = 0): [User!]!
+}
+
+enum PostCategory {
+    FOOD
+    CAFE
+    TRANSPORT
+    SHOPPING
+    GROCERY
+    ENTERTAINMENT
+    BILLS
+    HEALTH
+    TRAVEL
+    OTHER
 }
 
 type Comment {
@@ -94,14 +110,22 @@ input CreatePostInput {
     content: String!
     imageUrls: [String!]
     tag: String
+    amount: Int
+    category: PostCategory
 }
 
 input UpdatePostInput {
     content: String
     tag: String
+    amount: Int
+    category: PostCategory
 }
 
-input AddCommentInput {
+input CreateCommentInput {
     postId: ID!
+    content: String!
+}
+
+input UpdateCommentInput {
     content: String!
 }
