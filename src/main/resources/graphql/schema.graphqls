@@ -7,6 +7,14 @@ type Query {
     post(id: ID!): Post
     feed(limit: Int! = 20, offset: Int! = 0): [Post!]!
     bookmarks(limit: Int! = 20, offset: Int! = 0): [Post!]!
+    analyzeReceipt(imageUrl: String!): ReceiptAnalysis
+}
+
+type ReceiptAnalysis {
+    amount: Int
+    category: PostCategory
+    rawText: String!
+    confidence: Float!
 }
 
 type Mutation {

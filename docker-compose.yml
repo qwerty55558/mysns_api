@@ -1,0 +1,11 @@
+services:
+  ocr:
+    build:
+      context: ./ocr
+    image: mysns-ocr:latest
+    container_name: mysns-ocr
+    ports:
+      - "8001:8001"
+    environment:
+      OCR_LANGS: ko,en
+    restart: unless-stopped

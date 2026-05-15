@@ -9,6 +9,10 @@ mysns:
   upload:
     dir: ./uploads
     public-prefix: /uploads
+  ocr:
+    enabled: true
+    base-url: http://localhost:8001
+    timeout: 15s
 
 spring:
   application:

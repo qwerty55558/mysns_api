@@ -92,7 +92,10 @@ class GraphqlExceptionResolver : DataFetcherExceptionResolverAdapter() {
         401 -> SpringErrorType.UNAUTHORIZED
         403 -> SpringErrorType.FORBIDDEN
         404 -> SpringErrorType.NOT_FOUND
-        409 -> SpringErrorType.BAD_REQUEST
+        409 -> SpringErrorType.BAD_REQUEST  // CONFLICT — Spring enum 없음, extensions.httpStatus 로 보강
+        415 -> SpringErrorType.BAD_REQUEST
+        503 -> SpringErrorType.INTERNAL_ERROR
+        in 500..599 -> SpringErrorType.INTERNAL_ERROR
         else -> ErrorType.DataFetchingException
     }
 
