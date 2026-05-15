@@ -43,6 +43,9 @@ CLAUDE.local.md
 *.log
 logs/
 
+# Upload directory (local dev media storage)
+uploads/
+
 # Test / Coverage
 .gradle-test-kit/
 test-output/

@@ -6,10 +6,18 @@ mysns:
     access-ttl: 15m
   cors:
     allowed-origins: http://localhost:3000
+  upload:
+    dir: ./uploads
+    public-prefix: /uploads
 
 spring:
   application:
     name: mysns
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 8MB
+      max-request-size: 10MB
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/mysns}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
@@ -33,6 +41,10 @@ spring:
     schema:
       printer:
         enabled: true
+
+server:
+  error:
+    include-message: always  # REST 에러 응답에 ResponseStatusException.reason 노출
 
 management:
   endpoints:

@@ -48,6 +48,8 @@ class SecurityConfig {
             http.authorizeHttpRequests {
                 it.requestMatchers("/graphql", "/graphiql/**").permitAll()
                 it.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+                // /upload 은 permit + 컨트롤러에서 requireCurrentUser. /uploads/** 는 정적 자원 공개
+                it.requestMatchers("/upload", "/uploads/**").permitAll()
                 it.anyRequest().authenticated()
             }
         }
