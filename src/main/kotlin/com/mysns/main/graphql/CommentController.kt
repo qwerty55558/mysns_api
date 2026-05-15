@@ -11,14 +11,17 @@ import com.mysns.main.graphql.model.CreateCommentInput
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.UpdateCommentInput
 import com.mysns.main.graphql.model.User
+import jakarta.validation.Valid
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.MutationMapping
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.stereotype.Controller
+import org.springframework.validation.annotation.Validated
 
 @Controller
+@Validated
 class CommentController(
     private val commentStore: CommentStore,
     private val commentLikeStore: CommentLikeStore,
@@ -28,7 +31,7 @@ class CommentController(
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    fun addComment(@Argument input: CreateCommentInput): Comment {
+    fun addComment(@Argument @Valid input: CreateCommentInput): Comment {
         val current = requireCurrentUser()
         val postId = input.postId.toLong()
         postStore.findById(postId)
@@ -38,7 +41,7 @@ class CommentController(
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
-    fun updateComment(@Argument id: String, @Argument input: UpdateCommentInput): Comment {
+    fun updateComment(@Argument id: String, @Argument @Valid input: UpdateCommentInput): Comment {
         val current = requireCurrentUser()
         val existing = commentStore.findById(id.toLong())
             ?: throw IllegalArgumentException("comment not found: $id")

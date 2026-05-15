@@ -16,7 +16,8 @@ class DevAutoAuthFilter(private val userStore: UserStore) : OncePerRequestFilter
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        if (SecurityContextHolder.getContext().authentication == null) {
+        val hasAuthHeader = request.getHeader("Authorization") != null
+        if (!hasAuthHeader && SecurityContextHolder.getContext().authentication == null) {
             val devUser = userStore.first()
             if (devUser != null) {
                 val principal = AuthenticatedUser(devUser.id, devUser.username)

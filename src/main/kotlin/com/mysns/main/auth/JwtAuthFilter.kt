@@ -1,5 +1,6 @@
 package com.mysns.main.auth
 
+import io.jsonwebtoken.ExpiredJwtException
 import io.jsonwebtoken.JwtException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -20,22 +21,36 @@ class JwtAuthFilter(private val jwtProvider: JwtProvider) : OncePerRequestFilter
         filterChain: FilterChain,
     ) {
         val header = request.getHeader("Authorization")
-        if (header != null && header.startsWith("Bearer ")) {
-            val token = header.removePrefix("Bearer ").trim()
-            try {
-                val parsed = jwtProvider.parse(token)
-                val principal = AuthenticatedUser(parsed.userId, parsed.username)
-                val auth = UsernamePasswordAuthenticationToken(
-                    principal,
-                    null,
-                    listOf(SimpleGrantedAuthority("ROLE_USER")),
-                )
-                SecurityContextHolder.getContext().authentication = auth
-            } catch (e: JwtException) {
-                log.debug("invalid JWT: {}", e.message)
-            }
+        if (header == null || !header.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response)
+            return
         }
-        filterChain.doFilter(request, response)
+        val token = header.removePrefix("Bearer ").trim()
+        try {
+            val parsed = jwtProvider.parse(token)
+            val principal = AuthenticatedUser(parsed.userId, parsed.username)
+            val auth = UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                listOf(SimpleGrantedAuthority("ROLE_USER")),
+            )
+            SecurityContextHolder.getContext().authentication = auth
+            filterChain.doFilter(request, response)
+        } catch (e: ExpiredJwtException) {
+            log.debug("expired JWT: {}", e.message)
+            writeUnauthorized(response, "토큰이 만료되었습니다", "TOKEN_EXPIRED")
+        } catch (e: JwtException) {
+            log.debug("invalid JWT: {}", e.message)
+            writeUnauthorized(response, "유효하지 않은 토큰입니다", "TOKEN_INVALID")
+        }
+    }
+
+    private fun writeUnauthorized(response: HttpServletResponse, message: String, code: String) {
+        response.status = HttpServletResponse.SC_UNAUTHORIZED
+        response.contentType = "application/json;charset=UTF-8"
+        val body = """{"errors":[{"message":"$message","extensions":{"classification":"UNAUTHORIZED","code":"$code"}}],"data":null}"""
+        response.writer.write(body)
+        response.writer.flush()
     }
 
     companion object {

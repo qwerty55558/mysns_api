@@ -12,6 +12,7 @@ type Query {
 type Mutation {
     # Auth
     login(input: LoginInput!): AuthPayload!
+    register(input: RegisterInput!): AuthPayload!
 
     # Post
     createPost(input: CreatePostInput!): Post!
@@ -104,6 +105,12 @@ type AuthPayload {
 input LoginInput {
     username: String!
     password: String!
+}
+
+input RegisterInput {
+    username: String!
+    password: String!
+    displayName: String!
 }
 
 input CreatePostInput {
