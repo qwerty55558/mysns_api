@@ -2,16 +2,16 @@ package com.mysns.main.graphql
 
 import com.mysns.main.auth.currentUser
 import com.mysns.main.auth.requireCurrentUser
+import com.mysns.main.graphql.data.BookmarkStore
+import com.mysns.main.graphql.data.LikeStore
+import com.mysns.main.graphql.data.PostStore
+import com.mysns.main.graphql.data.UserStore
 import com.mysns.main.graphql.model.Comment
 import com.mysns.main.graphql.model.CreatePostInput
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.UpdatePostInput
 import com.mysns.main.graphql.model.User
-import com.mysns.main.graphql.stub.InMemoryBookmarkStore
-import com.mysns.main.graphql.stub.InMemoryCommentStore
-import com.mysns.main.graphql.stub.InMemoryLikeStore
-import com.mysns.main.graphql.stub.InMemoryPostStore
-import com.mysns.main.graphql.stub.InMemoryUserStore
+import com.mysns.main.graphql.data.CommentStore
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.MutationMapping
@@ -23,11 +23,11 @@ import org.springframework.stereotype.Controller
 
 @Controller
 class PostController(
-    private val postStore: InMemoryPostStore,
-    private val userStore: InMemoryUserStore,
-    private val likeStore: InMemoryLikeStore,
-    private val bookmarkStore: InMemoryBookmarkStore,
-    private val commentStore: InMemoryCommentStore,
+    private val postStore: PostStore,
+    private val userStore: UserStore,
+    private val likeStore: LikeStore,
+    private val bookmarkStore: BookmarkStore,
+    private val commentStore: CommentStore,
 ) {
 
     @QueryMapping
@@ -54,6 +54,8 @@ class PostController(
             content = input.content,
             imageUrls = input.imageUrls.orEmpty(),
             tag = input.tag,
+            amount = input.amount,
+            category = input.category,
         )
     }
 
@@ -66,7 +68,7 @@ class PostController(
         if (existing.authorId != current.userId) {
             throw AccessDeniedException("not the author of this post")
         }
-        return postStore.update(id.toLong(), input.content, input.tag)
+        return postStore.update(id.toLong(), input.content, input.tag, input.amount, input.category)
             ?: throw IllegalStateException("update failed")
     }
 
@@ -85,29 +87,30 @@ class PostController(
     @PreAuthorize("isAuthenticated()")
     fun likePost(@Argument postId: String): Post {
         val current = requireCurrentUser()
-        val post = postStore.findById(postId.toLong())
-            ?: throw IllegalArgumentException("post not found: $postId")
-        likeStore.like(current.userId, post.id)
-        return post
+        val id = postId.toLong()
+        postStore.findById(id) ?: throw IllegalArgumentException("post not found: $postId")
+        likeStore.like(current.userId, id)
+        return postStore.findById(id)!!
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun unlikePost(@Argument postId: String): Post {
         val current = requireCurrentUser()
-        val post = postStore.findById(postId.toLong())
-            ?: throw IllegalArgumentException("post not found: $postId")
-        likeStore.unlike(current.userId, post.id)
-        return post
+        val id = postId.toLong()
+        postStore.findById(id) ?: throw IllegalArgumentException("post not found: $postId")
+        likeStore.unlike(current.userId, id)
+        return postStore.findById(id)!!
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun bookmarkPost(@Argument postId: String): Post {
         val current = requireCurrentUser()
-        val post = postStore.findById(postId.toLong())
+        val id = postId.toLong()
+        val post = postStore.findById(id)
             ?: throw IllegalArgumentException("post not found: $postId")
-        bookmarkStore.bookmark(current.userId, post.id)
+        bookmarkStore.bookmark(current.userId, id)
         return post
     }
 
@@ -115,9 +118,10 @@ class PostController(
     @PreAuthorize("isAuthenticated()")
     fun unbookmarkPost(@Argument postId: String): Post {
         val current = requireCurrentUser()
-        val post = postStore.findById(postId.toLong())
+        val id = postId.toLong()
+        val post = postStore.findById(id)
             ?: throw IllegalArgumentException("post not found: $postId")
-        bookmarkStore.unbookmark(current.userId, post.id)
+        bookmarkStore.unbookmark(current.userId, id)
         return post
     }
 
@@ -136,25 +140,28 @@ class PostController(
         return posts.associateWith { byId[it.authorId] ?: error("missing author ${it.authorId}") }
     }
 
-    @SchemaMapping(typeName = "Post", field = "likeCount")
-    fun likeCount(post: Post): Int = likeStore.countFor(post.id)
-
-    @SchemaMapping(typeName = "Post", field = "commentCount")
-    fun commentCount(post: Post): Int = commentStore.countByPost(post.id)
-
-    @SchemaMapping(typeName = "Post", field = "shareCount")
-    fun shareCount(post: Post): Int = post.shareCount
-
-    @SchemaMapping(typeName = "Post", field = "viewerHasLiked")
-    fun viewerHasLiked(post: Post): Boolean {
-        val current = currentUser() ?: return false
-        return likeStore.isLikedBy(current.userId, post.id)
+    @BatchMapping(typeName = "Post", field = "viewerHasLiked")
+    fun viewerHasLiked(posts: List<Post>): Map<Post, Boolean> {
+        val current = currentUser() ?: return posts.associateWith { false }
+        val likedIds = likeStore.likedPostIdsFor(current.userId, posts.map { it.id })
+        return posts.associateWith { it.id in likedIds }
     }
 
-    @SchemaMapping(typeName = "Post", field = "viewerHasBookmarked")
-    fun viewerHasBookmarked(post: Post): Boolean {
-        val current = currentUser() ?: return false
-        return bookmarkStore.isBookmarkedBy(current.userId, post.id)
+    @BatchMapping(typeName = "Post", field = "viewerHasBookmarked")
+    fun viewerHasBookmarked(posts: List<Post>): Map<Post, Boolean> {
+        val current = currentUser() ?: return posts.associateWith { false }
+        val markedIds = bookmarkStore.bookmarkedPostIdsFor(current.userId, posts.map { it.id })
+        return posts.associateWith { it.id in markedIds }
+    }
+
+    @BatchMapping(typeName = "Post", field = "previewComment")
+    fun previewComment(posts: List<Post>): Map<Post, Comment> {
+        val byPostId = commentStore.latestByPostIds(posts.map { it.id })
+        val result = HashMap<Post, Comment>(byPostId.size)
+        for (p in posts) {
+            byPostId[p.id]?.let { result[p] = it }
+        }
+        return result
     }
 
     @SchemaMapping(typeName = "Post", field = "comments")

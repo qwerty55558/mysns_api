@@ -2,7 +2,7 @@ package com.mysns.main.config
 
 import com.mysns.main.auth.DevAutoAuthFilter
 import com.mysns.main.auth.JwtAuthFilter
-import com.mysns.main.graphql.stub.InMemoryUserStore
+import com.mysns.main.graphql.data.UserStore
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -31,7 +31,7 @@ class SecurityConfig {
     fun securityFilterChain(
         http: HttpSecurity,
         jwtAuthFilter: JwtAuthFilter,
-        userStore: InMemoryUserStore,
+        userStore: UserStore,
         @Value("\${mysns.security.dev-mode:false}") devMode: Boolean,
     ): SecurityFilterChain {
         http
@@ -41,13 +41,15 @@ class SecurityConfig {
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter::class.java)
 
         if (devMode) {
-            log.warn("===== DEV MODE ENABLED — all requests permitted, auto-auth as '{}' =====", userStore.first()?.username)
+            log.warn("===== DEV MODE ENABLED — all requests permitted, auto-auth as first seeded user =====")
             http.addFilterAfter(DevAutoAuthFilter(userStore), JwtAuthFilter::class.java)
             http.authorizeHttpRequests { it.anyRequest().permitAll() }
         } else {
             http.authorizeHttpRequests {
                 it.requestMatchers("/graphql", "/graphiql/**").permitAll()
                 it.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+                // /upload 은 permit + 컨트롤러에서 requireCurrentUser. /uploads/** 는 정적 자원 공개
+                it.requestMatchers("/upload", "/uploads/**").permitAll()
                 it.anyRequest().authenticated()
             }
         }
