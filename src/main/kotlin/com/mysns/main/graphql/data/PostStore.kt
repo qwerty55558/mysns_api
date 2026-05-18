@@ -1,7 +1,7 @@
 package com.mysns.main.graphql.data
 
+import com.mysns.main.graphql.model.Place
 import com.mysns.main.graphql.model.Post
-import com.mysns.main.graphql.model.PostCategory
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -34,8 +34,9 @@ class PostStore(
         content: String,
         imageUrls: List<String>,
         tag: String?,
+        item: String?,
         amount: Int?,
-        category: PostCategory?,
+        place: Place?,
     ): Post {
         val saved = postRepository.save(
             Post(
@@ -44,8 +45,9 @@ class PostStore(
                 createdAt = OffsetDateTime.now(),
                 imageUrls = imageUrls.toMutableList(),
                 tag = tag,
+                item = item,
                 amount = amount,
-                category = category,
+                place = place,
             )
         )
         userRepository.incrementPostCount(authorId)
@@ -57,14 +59,16 @@ class PostStore(
         id: Long,
         content: String?,
         tag: String?,
+        item: String?,
         amount: Int?,
-        category: PostCategory?,
+        place: Place?,
     ): Post? {
         val existing = postRepository.findById(id).orElse(null) ?: return null
         if (content != null) existing.content = content
         if (tag != null) existing.tag = tag
+        if (item != null) existing.item = item
         if (amount != null) existing.amount = amount
-        if (category != null) existing.category = category
+        if (place != null) existing.place = place
         existing.updatedAt = OffsetDateTime.now()
         return existing
     }

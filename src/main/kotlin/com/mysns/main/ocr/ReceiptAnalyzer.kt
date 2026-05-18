@@ -17,7 +17,6 @@ class ReceiptAnalyzer(
     private val uploadProps: UploadProperties,
     private val ocrClient: OcrClient,
     private val amountExtractor: AmountExtractor,
-    private val categoryClassifier: CategoryClassifier,
 ) {
     private val log = LoggerFactory.getLogger(ReceiptAnalyzer::class.java)
 
@@ -55,7 +54,6 @@ class ReceiptAnalyzer(
 
         return ReceiptAnalysis(
             amount = amountExtractor.extract(ocr.rawText),
-            category = categoryClassifier.classify(ocr.rawText),
             rawText = ocr.rawText,
             confidence = ocr.confidence,
         )

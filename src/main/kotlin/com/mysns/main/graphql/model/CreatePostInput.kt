@@ -4,6 +4,7 @@ data class CreatePostInput(
     val content: String,
     val imageUrls: List<String>? = null,
     val tag: String? = null,
+    val item: String? = null,
     val amount: Int? = null,
-    val category: PostCategory? = null,
+    val place: PlaceInput? = null,
 )

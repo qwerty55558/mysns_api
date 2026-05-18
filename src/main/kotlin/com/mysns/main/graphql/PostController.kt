@@ -54,8 +54,9 @@ class PostController(
             content = input.content,
             imageUrls = input.imageUrls.orEmpty(),
             tag = input.tag,
+            item = input.item,
             amount = input.amount,
-            category = input.category,
+            place = input.place?.toEntity(),
         )
     }
 
@@ -68,7 +69,14 @@ class PostController(
         if (existing.authorId != current.userId) {
             throw AccessDeniedException("not the author of this post")
         }
-        return postStore.update(id.toLong(), input.content, input.tag, input.amount, input.category)
+        return postStore.update(
+            id.toLong(),
+            input.content,
+            input.tag,
+            input.item,
+            input.amount,
+            input.place?.toEntity(),
+        )
             ?: throw IllegalStateException("update failed")
     }
 
