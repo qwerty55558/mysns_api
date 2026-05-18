@@ -3,9 +3,8 @@ package com.mysns.main.graphql.model
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
+import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -55,12 +54,14 @@ class Post(
     @Column(length = 64)
     var tag: String? = null,
 
+    @Column(length = 128)
+    var item: String? = null,
+
     @Column
     var amount: Int? = null,
 
-    @Enumerated(EnumType.STRING)
-    @Column(length = 32)
-    var category: PostCategory? = null,
+    @Embedded
+    var place: Place? = null,
 
     @Column(name = "like_count", nullable = false)
     var likeCount: Int = 0,

@@ -12,7 +12,6 @@ type Query {
 
 type ReceiptAnalysis {
     amount: Int
-    category: PostCategory
     rawText: String!
     confidence: Float!
 }
@@ -69,8 +68,9 @@ type Post {
     updatedAt: DateTime
     imageUrls: [String!]!
     tag: String
+    item: String
     amount: Int
-    category: PostCategory
+    place: Place
     likeCount: Int!
     commentCount: Int!
     shareCount: Int!
@@ -81,17 +81,15 @@ type Post {
     likedBy(limit: Int! = 20, offset: Int! = 0): [User!]!
 }
 
-enum PostCategory {
-    FOOD
-    CAFE
-    TRANSPORT
-    SHOPPING
-    GROCERY
-    ENTERTAINMENT
-    BILLS
-    HEALTH
-    TRAVEL
-    OTHER
+# 카카오 Local API 응답 (place_name, x, y, road_address_name, category_group_name, category_group_code, id)
+type Place {
+    latitude: Float!
+    longitude: Float!
+    name: String!
+    address: String
+    externalId: String
+    categoryName: String
+    categoryCode: String
 }
 
 type Comment {
@@ -125,15 +123,27 @@ input CreatePostInput {
     content: String!
     imageUrls: [String!]
     tag: String
+    item: String
     amount: Int
-    category: PostCategory
+    place: PlaceInput
 }
 
 input UpdatePostInput {
     content: String
     tag: String
+    item: String
     amount: Int
-    category: PostCategory
+    place: PlaceInput
+}
+
+input PlaceInput {
+    latitude: Float!
+    longitude: Float!
+    name: String!
+    address: String
+    externalId: String
+    categoryName: String
+    categoryCode: String
 }
 
 input CreateCommentInput {
