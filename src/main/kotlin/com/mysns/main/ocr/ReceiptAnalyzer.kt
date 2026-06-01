@@ -4,9 +4,6 @@ import com.mysns.main.upload.UploadProperties
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
-import org.springframework.web.client.HttpClientErrorException
-import org.springframework.web.client.ResourceAccessException
-import org.springframework.web.client.RestClientException
 import org.springframework.web.server.ResponseStatusException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -15,8 +12,7 @@ import java.nio.file.Path
 class ReceiptAnalyzer(
     private val ocrProps: OcrProperties,
     private val uploadProps: UploadProperties,
-    private val ocrClient: OcrClient,
-    private val amountExtractor: AmountExtractor,
+    private val ocrEngine: OcrEngine,
 ) {
     private val log = LoggerFactory.getLogger(ReceiptAnalyzer::class.java)
 
@@ -26,36 +22,23 @@ class ReceiptAnalyzer(
         }
 
         val path = resolveUploadPath(imageUrl)
-        val bytes = Files.readAllBytes(path)
-        val filename = path.fileName.toString()
-        val contentType = inferContentType(filename)
+        val contentType = inferContentType(path.fileName.toString())
+        val result = ocrEngine.analyze(path, contentType)
 
-        val ocr = try {
-            ocrClient.ocr(filename, bytes, contentType)
-        } catch (e: ResourceAccessException) {
-            log.warn("OCR sidecar 연결 실패: {}", e.message)
-            throw ResponseStatusException(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "OCR 서비스에 연결할 수 없습니다 (sidecar 가 떠있는지 확인)",
-            )
-        } catch (e: HttpClientErrorException) {
-            log.warn("OCR sidecar 4xx: {}", e.message)
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "이미지를 인식할 수 없습니다 (지원되는 PNG/JPEG 인지 확인)",
-            )
-        } catch (e: RestClientException) {
-            log.warn("OCR sidecar 5xx 또는 기타: {}", e.message)
-            throw ResponseStatusException(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                "OCR 처리 중 오류가 발생했습니다",
+        val trustworthy = result.confidence >= ocrProps.confidenceThreshold
+        if (!trustworthy) {
+            log.info(
+                "OCR confidence {} < threshold {} → amount=null (rawText 길이={})",
+                result.confidence, ocrProps.confidenceThreshold, result.rawText.length,
             )
         }
-
         return ReceiptAnalysis(
-            amount = amountExtractor.extract(ocr.rawText),
-            rawText = ocr.rawText,
-            confidence = ocr.confidence,
+            amount = if (trustworthy) result.amount else null,
+            item = if (trustworthy) result.item else null,
+            tag = if (trustworthy) result.tag else null,
+            placeName = if (trustworthy) result.placeName else null,
+            rawText = result.rawText,
+            confidence = result.confidence,
         )
     }
 
@@ -68,7 +51,7 @@ class ReceiptAnalyzer(
             )
         }
         val relative = imageUrl.removePrefix(prefix).removePrefix("/")
-        if (relative.isEmpty() || relative.contains("..") || relative.contains('/') || relative.contains('\\')) {
+        if (relative.isEmpty() || relative.contains("..") || relative.contains('\\')) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "잘못된 이미지 경로입니다")
         }
         val dir = Path.of(uploadProps.dir).toAbsolutePath().normalize()

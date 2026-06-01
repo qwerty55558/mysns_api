@@ -1,11 +1,55 @@
 services:
-  ocr:
-    build:
-      context: ./ocr
-    image: mysns-ocr:latest
-    container_name: mysns-ocr
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.106.1
+    container_name: mysns-vm
+    profiles: ["observability"]
     ports:
-      - "8001:8001"
-    environment:
-      OCR_LANGS: ko,en
+      - "8428:8428"
+    volumes:
+      - vm-data:/storage
+      - ./observability/vmagent/scrape.yml:/etc/vm/scrape.yml:ro
+    command:
+      - "-storageDataPath=/storage"
+      - "-retentionPeriod=14d"
+      - "-promscrape.config=/etc/vm/scrape.yml"
+      - "-memory.allowedPercent=30"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.3.2
+    container_name: mysns-loki
+    profiles: ["observability"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+      - ./observability/loki/config.yml:/etc/loki/config.yml:ro
+    command: -config.file=/etc/loki/config.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: mysns-grafana
+    profiles: ["observability"]
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - victoriametrics
+      - loki
+    restart: unless-stopped
+
+volumes:
+  vm-data:
+  loki-data:
+  grafana-data:

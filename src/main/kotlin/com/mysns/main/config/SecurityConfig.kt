@@ -1,5 +1,6 @@
 package com.mysns.main.config
 
+import com.mysns.main.auth.AuthenticatedUser
 import com.mysns.main.auth.DevAutoAuthFilter
 import com.mysns.main.auth.JwtAuthFilter
 import com.mysns.main.graphql.data.UserStore
@@ -7,6 +8,8 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.security.authorization.AuthorizationDecision
+import org.springframework.security.authorization.AuthorizationManager
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
@@ -14,6 +17,7 @@ import org.springframework.security.config.http.SessionCreationPolicy
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.access.intercept.RequestAuthorizationContext
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
 import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
@@ -48,13 +52,29 @@ class SecurityConfig {
             http.authorizeHttpRequests {
                 it.requestMatchers("/graphql", "/graphiql/**").permitAll()
                 it.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
-                // /upload 은 permit + 컨트롤러에서 requireCurrentUser. /uploads/** 는 정적 자원 공개
-                it.requestMatchers("/upload", "/uploads/**").permitAll()
+                it.requestMatchers("/upload").authenticated()
+                // 본인이 업로드한 temp 폴더만 접근 가능 (path 의 userId 와 현재 사용자 비교)
+                it.requestMatchers("/uploads/temp/**").access(tempOwnerAuth())
+                // commit 된 post 이미지는 인증된 사용자 누구나 (현 시점 모든 post 가 public)
+                it.requestMatchers("/uploads/posts/**").authenticated()
                 it.anyRequest().authenticated()
             }
         }
         return http.build()
     }
+
+    private fun tempOwnerAuth(): AuthorizationManager<RequestAuthorizationContext> =
+        AuthorizationManager { authSupplier, ctx ->
+            val auth = authSupplier.get()
+            val principal = auth?.principal as? AuthenticatedUser
+                ?: return@AuthorizationManager AuthorizationDecision(false)
+            // URI: /uploads/temp/{userId}/{filename}
+            val segments = ctx.request.requestURI.split('/').filter { it.isNotEmpty() }
+            // [uploads, temp, userId, filename, ...]
+            val pathUserId = segments.getOrNull(2)?.toLongOrNull()
+                ?: return@AuthorizationManager AuthorizationDecision(false)
+            AuthorizationDecision(pathUserId == principal.userId)
+        }
 
     @Bean
     fun corsConfigurationSource(

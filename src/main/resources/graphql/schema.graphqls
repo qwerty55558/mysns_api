@@ -8,10 +8,20 @@ type Query {
     feed(limit: Int! = 20, offset: Int! = 0): [Post!]!
     bookmarks(limit: Int! = 20, offset: Int! = 0): [Post!]!
     analyzeReceipt(imageUrl: String!): ReceiptAnalysis
+
+    # 비공개 계정에서 들어온 팔로우 요청. 본인 받은 것만 노출.
+    incomingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
+    # 내가 보낸 팔로우 요청 (pending 만).
+    outgoingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
+    # 헤더 뱃지용. 미응답 받은 요청 수.
+    incomingFollowRequestCount: Int!
 }
 
 type ReceiptAnalysis {
     amount: Int
+    item: String
+    tag: String
+    placeName: String
     rawText: String!
     confidence: Float!
 }
@@ -20,6 +30,7 @@ type Mutation {
     # Auth
     login(input: LoginInput!): AuthPayload!
     register(input: RegisterInput!): AuthPayload!
+    refresh(refreshToken: String!): AuthPayload!
 
     # Post
     createPost(input: CreatePostInput!): Post!
@@ -41,8 +52,17 @@ type Mutation {
     unlikeComment(id: ID!): Comment!
 
     # Follow
+    # target이 public → 즉시 follow. target이 private → FollowRequest 생성 (반환 User.viewerHasRequestedFollow = true).
     followUser(id: ID!): User!
     unfollowUser(id: ID!): User!
+    # 내가 보낸 요청 취소 (FollowRequest.id 또는 target user id 어느 쪽이든 받게 — id로 통일)
+    cancelFollowRequest(id: ID!): Boolean!
+    # 내가 받은 요청 처리 (id = FollowRequest.id). accept는 Follow 생성 후 requester User 반환.
+    acceptFollowRequest(id: ID!): User!
+    rejectFollowRequest(id: ID!): Boolean!
+
+    # Profile
+    updateMe(input: UpdateMeInput!): User!
 }
 
 type User {
@@ -55,9 +75,25 @@ type User {
     postCount: Int!
     followerCount: Int!
     followingCount: Int!
+    privateAccount: Boolean!
     viewerIsFollowing: Boolean!
+    # 내가 이 사용자에게 follow request를 보냈고 아직 응답 대기 중인지
+    viewerHasRequestedFollow: Boolean!
     posts(limit: Int! = 20, offset: Int! = 0): [Post!]!
     bookmarkedPosts(limit: Int! = 20, offset: Int! = 0): [Post!]!
+}
+
+type FollowRequest {
+    id: ID!
+    requester: User!
+    target: User!
+    createdAt: DateTime!
+}
+
+input UpdateMeInput {
+    displayName: String
+    bio: String
+    privateAccount: Boolean
 }
 
 type Post {
@@ -105,6 +141,8 @@ type Comment {
 
 type AuthPayload {
     accessToken: String!
+    refreshToken: String!
+    accessTokenExpiresAt: DateTime!
     user: User!
 }
 
@@ -134,6 +172,10 @@ input UpdatePostInput {
     item: String
     amount: Int
     place: PlaceInput
+    # null = 이미지 변경 없음. [] = 모든 이미지 제거. 값 = 그 리스트로 교체.
+    # 리스트 안엔 (1) /uploads/temp/{userId}/... 또는 (2) 이 post의 기존
+    # /uploads/posts/{postId}/... URL을 섞어 보낼 수 있다.
+    imageUrls: [String!]
 }
 
 input PlaceInput {

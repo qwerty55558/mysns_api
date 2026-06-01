@@ -38,4 +38,21 @@ class UserStore(
                 passwordHash = passwordHash,
             )
         )
+
+    /** 프로필 부분 업데이트. null은 변경 없음. */
+    @Transactional
+    fun update(
+        userId: Long,
+        displayName: String? = null,
+        bio: String? = null,
+        privateAccount: Boolean? = null,
+    ): User {
+        val user = userRepository.findById(userId).orElseThrow {
+            IllegalStateException("user not found: $userId")
+        }
+        if (displayName != null) user.displayName = displayName
+        if (bio != null) user.bio = bio.ifBlank { null }
+        if (privateAccount != null) user.privateAccount = privateAccount
+        return userRepository.save(user)
+    }
 }

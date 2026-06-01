@@ -32,18 +32,20 @@ class UploadController(private val props: UploadProperties) {
                 "지원하지 않는 이미지 형식입니다 (png, jpg, webp 만 허용)",
             )
 
-        val dir = Path.of(props.dir).toAbsolutePath().normalize()
-        Files.createDirectories(dir)
+        val baseDir = Path.of(props.dir).toAbsolutePath().normalize()
+        val tempDir = baseDir.resolve("temp").resolve(user.userId.toString())
+        Files.createDirectories(tempDir)
 
         val filename = "${UUID.randomUUID()}.$ext"
-        val target = dir.resolve(filename)
+        val target = tempDir.resolve(filename)
         file.inputStream.use { input ->
             Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING)
         }
 
-        log.info("upload ok — user={} filename={} size={}", user.userId, filename, file.size)
+        val url = "${props.publicPrefix}/temp/${user.userId}/$filename"
+        log.info("upload ok — user={} url={} size={}", user.userId, url, file.size)
         return UploadResponse(
-            url = "${props.publicPrefix}/$filename",
+            url = url,
             size = file.size,
             contentType = contentType ?: "application/octet-stream",
         )

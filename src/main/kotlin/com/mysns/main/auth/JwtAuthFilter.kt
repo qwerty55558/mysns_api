@@ -27,7 +27,7 @@ class JwtAuthFilter(private val jwtProvider: JwtProvider) : OncePerRequestFilter
         }
         val token = header.removePrefix("Bearer ").trim()
         try {
-            val parsed = jwtProvider.parse(token)
+            val parsed = jwtProvider.parseAccess(token)
             val principal = AuthenticatedUser(parsed.userId, parsed.username)
             val auth = UsernamePasswordAuthenticationToken(
                 principal,

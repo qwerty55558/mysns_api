@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: mysns-dashboards
+    orgId: 1
+    folder: mysns
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

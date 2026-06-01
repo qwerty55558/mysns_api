@@ -21,4 +21,8 @@ class AuthController(private val authService: AuthService) {
     @MutationMapping
     fun register(@Argument @Valid input: RegisterInput): AuthPayload =
         authService.register(input.username, input.password, input.displayName)
+
+    @MutationMapping
+    fun refresh(@Argument refreshToken: String): AuthPayload =
+        authService.refresh(refreshToken)
 }

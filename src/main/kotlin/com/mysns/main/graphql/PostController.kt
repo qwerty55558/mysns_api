@@ -12,6 +12,8 @@ import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.UpdatePostInput
 import com.mysns.main.graphql.model.User
 import com.mysns.main.graphql.data.CommentStore
+import com.mysns.main.upload.UploadCommitter
+import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.MutationMapping
@@ -28,6 +30,8 @@ class PostController(
     private val likeStore: LikeStore,
     private val bookmarkStore: BookmarkStore,
     private val commentStore: CommentStore,
+    private val uploadCommitter: UploadCommitter,
+    private val meterRegistry: MeterRegistry,
 ) {
 
     @QueryMapping
@@ -49,46 +53,70 @@ class PostController(
     @PreAuthorize("isAuthenticated()")
     fun createPost(@Argument input: CreatePostInput): Post {
         val current = requireCurrentUser()
-        return postStore.create(
+        val draft = postStore.create(
             authorId = current.userId,
             content = input.content,
-            imageUrls = input.imageUrls.orEmpty(),
+            imageUrls = emptyList(),
             tag = input.tag,
             item = input.item,
             amount = input.amount,
             place = input.place?.toEntity(),
         )
+        val committed = uploadCommitter.commit(input.imageUrls.orEmpty(), draft.id, current.userId)
+        val finalPost = if (committed.isNotEmpty()) {
+            postStore.setImageUrls(draft.id, committed) ?: draft
+        } else draft
+        meterRegistry.counter(
+            "mysns.post.created",
+            "has_amount", (input.amount != null).toString(),
+            "has_place", (input.place != null).toString(),
+        ).increment()
+        return finalPost
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun updatePost(@Argument id: String, @Argument input: UpdatePostInput): Post {
         val current = requireCurrentUser()
-        val existing = postStore.findById(id.toLong())
+        val postId = id.toLong()
+        val existing = postStore.findById(postId)
             ?: throw IllegalArgumentException("post not found: $id")
         if (existing.authorId != current.userId) {
             throw AccessDeniedException("not the author of this post")
         }
-        return postStore.update(
-            id.toLong(),
+        val updated = postStore.update(
+            postId,
             input.content,
             input.tag,
             input.item,
             input.amount,
             input.place?.toEntity(),
-        )
-            ?: throw IllegalStateException("update failed")
+        ) ?: throw IllegalStateException("update failed")
+
+        if (input.imageUrls != null) {
+            val reconciled = uploadCommitter.reconcile(
+                currentUrls = existing.imageUrls.toList(),
+                inputUrls = input.imageUrls,
+                postId = postId,
+                userId = current.userId,
+            )
+            postStore.setImageUrls(postId, reconciled)
+        }
+        return postStore.findById(postId) ?: updated
     }
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun deletePost(@Argument id: String): Boolean {
         val current = requireCurrentUser()
-        val post = postStore.findById(id.toLong()) ?: return false
+        val postId = id.toLong()
+        val post = postStore.findById(postId) ?: return false
         if (post.authorId != current.userId) {
             throw AccessDeniedException("not the author of this post")
         }
-        return postStore.delete(id.toLong())
+        val deleted = postStore.delete(postId)
+        if (deleted) uploadCommitter.deletePostDir(postId)
+        return deleted
     }
 
     @MutationMapping

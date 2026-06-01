@@ -6,4 +6,5 @@ data class UpdatePostInput(
     val item: String? = null,
     val amount: Int? = null,
     val place: PlaceInput? = null,
+    val imageUrls: List<String>? = null,
 )

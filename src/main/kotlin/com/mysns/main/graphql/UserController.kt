@@ -3,10 +3,13 @@ package com.mysns.main.graphql
 import com.mysns.main.auth.currentUser
 import com.mysns.main.auth.requireCurrentUser
 import com.mysns.main.graphql.data.BookmarkStore
+import com.mysns.main.graphql.data.FollowRequest
+import com.mysns.main.graphql.data.FollowRequestStore
 import com.mysns.main.graphql.data.FollowStore
 import com.mysns.main.graphql.data.PostStore
 import com.mysns.main.graphql.data.UserStore
 import com.mysns.main.graphql.model.Post
+import com.mysns.main.graphql.model.UpdateMeInput
 import com.mysns.main.graphql.model.User
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
@@ -23,6 +26,7 @@ class UserController(
     private val postStore: PostStore,
     private val bookmarkStore: BookmarkStore,
     private val followStore: FollowStore,
+    private val followRequestStore: FollowRequestStore,
 ) {
 
     @QueryMapping
@@ -38,6 +42,33 @@ class UserController(
     fun userByUsername(@Argument username: String): User? =
         userStore.findByUsername(username)
 
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    fun incomingFollowRequests(
+        @Argument limit: Int,
+        @Argument offset: Int,
+    ): List<FollowRequest> {
+        val current = requireCurrentUser()
+        return followRequestStore.incoming(current.userId, limit, offset)
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    fun outgoingFollowRequests(
+        @Argument limit: Int,
+        @Argument offset: Int,
+    ): List<FollowRequest> {
+        val current = requireCurrentUser()
+        return followRequestStore.outgoing(current.userId, limit, offset)
+    }
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
+    fun incomingFollowRequestCount(): Int {
+        val current = requireCurrentUser()
+        return followRequestStore.incomingCount(current.userId)
+    }
+
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun followUser(@Argument id: String): User {
@@ -46,9 +77,15 @@ class UserController(
         if (current.userId == targetId) {
             throw AccessDeniedException("cannot follow yourself")
         }
-        userStore.findById(targetId)
+        val target = userStore.findById(targetId)
             ?: throw IllegalArgumentException("user not found: $id")
-        followStore.follow(current.userId, targetId)
+
+        if (target.privateAccount && !followStore.isFollowing(current.userId, targetId)) {
+            // 비공개 계정 — 즉시 follow 대신 request 생성 (이미 있으면 idempotent)
+            followRequestStore.create(current.userId, targetId)
+        } else {
+            followStore.follow(current.userId, targetId)
+        }
         return userStore.findById(targetId)!!
     }
 
@@ -63,9 +100,67 @@ class UserController(
         return userStore.findById(targetId)!!
     }
 
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun cancelFollowRequest(@Argument id: String): Boolean {
+        val current = requireCurrentUser()
+        val request = followRequestStore.findById(id.toLong()) ?: return false
+        if (request.requesterId != current.userId) {
+            throw AccessDeniedException("only the requester can cancel this request")
+        }
+        followRequestStore.delete(request)
+        return true
+    }
+
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun acceptFollowRequest(@Argument id: String): User {
+        val current = requireCurrentUser()
+        val request = followRequestStore.findById(id.toLong())
+            ?: throw IllegalArgumentException("follow request not found: $id")
+        if (request.targetId != current.userId) {
+            throw AccessDeniedException("only the target can accept this request")
+        }
+        followStore.follow(request.requesterId, request.targetId)
+        followRequestStore.delete(request)
+        return userStore.findById(request.requesterId)!!
+    }
+
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun rejectFollowRequest(@Argument id: String): Boolean {
+        val current = requireCurrentUser()
+        val request = followRequestStore.findById(id.toLong()) ?: return false
+        if (request.targetId != current.userId) {
+            throw AccessDeniedException("only the target can reject this request")
+        }
+        followRequestStore.delete(request)
+        return true
+    }
+
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun updateMe(@Argument input: UpdateMeInput): User {
+        val current = requireCurrentUser()
+        return userStore.update(
+            userId = current.userId,
+            displayName = input.displayName?.trim()?.takeIf { it.isNotEmpty() },
+            bio = input.bio,
+            privateAccount = input.privateAccount,
+        )
+    }
+
     @SchemaMapping(typeName = "User", field = "posts")
-    fun posts(user: User, @Argument limit: Int, @Argument offset: Int): List<Post> =
-        postStore.findByAuthor(user.id, limit, offset)
+    fun posts(user: User, @Argument limit: Int, @Argument offset: Int): List<Post> {
+        // 비공개 계정의 게시물은 본인 + 팔로워에게만.
+        if (user.privateAccount) {
+            val viewer = currentUser()
+            val visible = viewer != null &&
+                (viewer.userId == user.id || followStore.isFollowing(viewer.userId, user.id))
+            if (!visible) return emptyList()
+        }
+        return postStore.findByAuthor(user.id, limit, offset)
+    }
 
     @BatchMapping(typeName = "User", field = "viewerIsFollowing")
     fun viewerIsFollowing(users: List<User>): Map<User, Boolean> {
@@ -73,6 +168,14 @@ class UserController(
         val targetIds = users.mapNotNull { if (it.id == current.userId) null else it.id }
         val followed = followStore.followedUserIdsFor(current.userId, targetIds)
         return users.associateWith { it.id != current.userId && it.id in followed }
+    }
+
+    @BatchMapping(typeName = "User", field = "viewerHasRequestedFollow")
+    fun viewerHasRequestedFollow(users: List<User>): Map<User, Boolean> {
+        val current = currentUser() ?: return users.associateWith { false }
+        val targetIds = users.mapNotNull { if (it.id == current.userId) null else it.id }
+        val pending = followRequestStore.requesterPendingToTargets(current.userId, targetIds)
+        return users.associateWith { it.id != current.userId && it.id in pending }
     }
 
     @SchemaMapping(typeName = "User", field = "bookmarkedPosts")
@@ -84,4 +187,12 @@ class UserController(
         val postIds = bookmarkStore.bookmarksOf(user.id, limit, offset)
         return postStore.findAllById(postIds)
     }
+
+    @SchemaMapping(typeName = "FollowRequest", field = "requester")
+    fun followRequestRequester(req: FollowRequest): User =
+        userStore.findById(req.requesterId)!!
+
+    @SchemaMapping(typeName = "FollowRequest", field = "target")
+    fun followRequestTarget(req: FollowRequest): User =
+        userStore.findById(req.targetId)!!
 }

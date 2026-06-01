@@ -74,6 +74,15 @@ class PostStore(
     }
 
     @Transactional
+    fun setImageUrls(id: Long, imageUrls: List<String>): Post? {
+        val existing = postRepository.findById(id).orElse(null) ?: return null
+        existing.imageUrls.clear()
+        existing.imageUrls.addAll(imageUrls)
+        existing.updatedAt = OffsetDateTime.now()
+        return existing
+    }
+
+    @Transactional
     fun delete(id: Long): Boolean {
         val post = postRepository.findById(id).orElse(null) ?: return false
         val commentIds = commentRepository.findByPostId(id).map { it.id }
