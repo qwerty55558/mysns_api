@@ -19,10 +19,10 @@ class User(
     val username: String,
 
     @Column(nullable = false, length = 64)
-    val displayName: String,
+    var displayName: String,
 
     @Column(columnDefinition = "text")
-    val bio: String? = null,
+    var bio: String? = null,
 
     @Column(nullable = false)
     val createdAt: OffsetDateTime,
@@ -41,4 +41,7 @@ class User(
 
     @Column(nullable = false)
     var followingCount: Int = 0,
+
+    @Column(name = "private_account", nullable = false)
+    var privateAccount: Boolean = false,
 )

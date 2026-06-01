@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProperty scope="context" name="appName" source="spring.application.name" defaultValue="mysns"/>
+    <springProperty scope="context" name="lokiUrl" source="mysns.loki.url" defaultValue="http://localhost:3100/loki/api/v1/push"/>
+
+    <appender name="CONSOLE_PRETTY" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level [%X{traceId:-},%X{spanId:-}] %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="CONSOLE_JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
+            <customFields>{"app":"${appName}"}</customFields>
+        </encoder>
+    </appender>
+
+    <springProfile name="loki">
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+            <http>
+                <url>${lokiUrl}</url>
+            </http>
+            <format>
+                <label>
+                    <pattern>app=${appName},host=${HOSTNAME},level=%level</pattern>
+                </label>
+                <message>
+                    <pattern>l=%level h=${HOSTNAME} t=%X{traceId:-} s=%X{spanId:-} c=%logger{20} | %msg %ex</pattern>
+                </message>
+                <sortByTime>true</sortByTime>
+            </format>
+        </appender>
+    </springProfile>
+
+    <root level="INFO">
+        <springProfile name="!json">
+            <appender-ref ref="CONSOLE_PRETTY"/>
+        </springProfile>
+        <springProfile name="json">
+            <appender-ref ref="CONSOLE_JSON"/>
+        </springProfile>
+        <springProfile name="loki">
+            <appender-ref ref="LOKI"/>
+        </springProfile>
+    </root>
+</configuration>

@@ -7,4 +7,5 @@ import java.time.Duration
 data class JwtProperties(
     val secret: String,
     val accessTtl: Duration = Duration.ofMinutes(15),
+    val refreshTtl: Duration = Duration.ofDays(30),
 )
