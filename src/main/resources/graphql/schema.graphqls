@@ -15,6 +15,18 @@ type Query {
     outgoingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
     # 헤더 뱃지용. 미응답 받은 요청 수.
     incomingFollowRequestCount: Int!
+
+    # Direct Messages
+    # 내 대화 목록 (최근 활동순).
+    conversations(limit: Int! = 20, offset: Int! = 0): [Conversation!]!
+    # 대화 단건 (참여자만).
+    conversation(id: ID!): Conversation
+    # 특정 상대와의 기존 대화 (없으면 null). 상대 프로필/공유 시 사용.
+    conversationWith(userId: ID!): Conversation
+    # 대화의 메시지 (최신순). 화면에선 역순으로 표시.
+    messages(conversationId: ID!, limit: Int! = 30, offset: Int! = 0): [Message!]!
+    # 헤더 뱃지용. 안읽은 메시지 총합.
+    unreadMessageCount: Int!
 }
 
 type ReceiptAnalysis {
@@ -63,6 +75,12 @@ type Mutation {
 
     # Profile
     updateMe(input: UpdateMeInput!): User!
+
+    # Direct Messages
+    # 텍스트 또는 게시물 공유 전송. 대화가 없으면 생성. sharedPostId가 있으면 그 게시물 shareCount 증가.
+    sendMessage(input: SendMessageInput!): Message!
+    # 대화를 읽음 처리 (안읽음 뱃지 해제).
+    markConversationRead(conversationId: ID!): Conversation!
 }
 
 type User {
@@ -81,6 +99,10 @@ type User {
     viewerHasRequestedFollow: Boolean!
     posts(limit: Int! = 20, offset: Int! = 0): [Post!]!
     bookmarkedPosts(limit: Int! = 20, offset: Int! = 0): [Post!]!
+    # 내가 팔로우하는 사용자 목록 (DM 수신자 picker / 팔로잉 목록).
+    following(limit: Int! = 30, offset: Int! = 0): [User!]!
+    # 나를 팔로우하는 사용자 목록 (팔로워 목록).
+    followers(limit: Int! = 30, offset: Int! = 0): [User!]!
 }
 
 type FollowRequest {
@@ -195,4 +217,34 @@ input CreateCommentInput {
 
 input UpdateCommentInput {
     content: String!
+}
+
+# ----------------------------------------------------------------- Direct Messages
+
+type Conversation {
+    id: ID!
+    # viewer 기준 상대방.
+    participant: User!
+    lastMessage: Message
+    # viewer의 안읽음 수.
+    unreadCount: Int!
+    updatedAt: DateTime!
+}
+
+type Message {
+    id: ID!
+    conversationId: ID!
+    sender: User!
+    # 텍스트 메시지면 채워짐.
+    text: String
+    # 게시물 공유 메시지면 채워짐.
+    sharedPost: Post
+    createdAt: DateTime!
+    viewerIsSender: Boolean!
+}
+
+input SendMessageInput {
+    recipientId: ID!
+    text: String
+    sharedPostId: ID
 }
