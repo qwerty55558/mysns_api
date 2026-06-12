@@ -21,6 +21,8 @@ class DataInitializer(
     private val commentRepository: CommentRepository,
     private val commentLikeRepository: CommentLikeRepository,
     private val passwordEncoder: PasswordEncoder,
+    private val followStore: FollowStore,
+    private val messageStore: MessageStore,
 ) {
 
     private val log = LoggerFactory.getLogger(DataInitializer::class.java)
@@ -36,6 +38,8 @@ class DataInitializer(
 
         val users = seedUsers()
         val posts = seedPosts(users)
+        seedFollows(users)
+        seedConversations(users)
 
         log.info(
             "data init done — users={}, posts={}, follows={}, likes={}, bookmarks={}, comments={}",
@@ -83,6 +87,28 @@ class DataInitializer(
             )
         )
         return mapOf("alice" to alice, "bob" to bob, "charlie" to charlie)
+    }
+
+    private fun seedFollows(users: Map<String, User>) {
+        val alice = users.getValue("alice")
+        val bob = users.getValue("bob")
+        val charlie = users.getValue("charlie")
+        // alice ↔ bob 상호 팔로우, alice → charlie, charlie → alice
+        followStore.follow(alice.id, bob.id)
+        followStore.follow(alice.id, charlie.id)
+        followStore.follow(bob.id, alice.id)
+        followStore.follow(charlie.id, alice.id)
+    }
+
+    private fun seedConversations(users: Map<String, User>) {
+        val alice = users.getValue("alice")
+        val bob = users.getValue("bob")
+        val charlie = users.getValue("charlie")
+        // alice ↔ bob 대화 (bob의 마지막 메시지 → alice에게 안읽음 1)
+        messageStore.send(alice.id, bob.id, "안녕 Bob! 어제 그 카페 어디였어?", null)
+        messageStore.send(bob.id, alice.id, "강남 스타벅스R점! 모카프라푸치노 추천 ☕", null)
+        // alice → charlie 대화
+        messageStore.send(alice.id, charlie.id, "charlie 산책 사진 좋더라 🌿", null)
     }
 
     private fun seedPosts(users: Map<String, User>): List<Post> {

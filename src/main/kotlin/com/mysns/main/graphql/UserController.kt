@@ -162,6 +162,24 @@ class UserController(
         return postStore.findByAuthor(user.id, limit, offset)
     }
 
+    @SchemaMapping(typeName = "User", field = "following")
+    fun following(user: User, @Argument limit: Int, @Argument offset: Int): List<User> {
+        // 내가 팔로우하는 사용자 목록 (DM 수신자 picker / 팔로잉 목록). follow 최신순 유지.
+        val ids = followStore.followeeIdsOf(user.id, limit, offset)
+        if (ids.isEmpty()) return emptyList()
+        val byId = userStore.findAllById(ids).associateBy { it.id }
+        return ids.mapNotNull { byId[it] }
+    }
+
+    @SchemaMapping(typeName = "User", field = "followers")
+    fun followers(user: User, @Argument limit: Int, @Argument offset: Int): List<User> {
+        // 나를 팔로우하는 사용자 목록. follow 최신순 유지.
+        val ids = followStore.followerIdsOf(user.id, limit, offset)
+        if (ids.isEmpty()) return emptyList()
+        val byId = userStore.findAllById(ids).associateBy { it.id }
+        return ids.mapNotNull { byId[it] }
+    }
+
     @BatchMapping(typeName = "User", field = "viewerIsFollowing")
     fun viewerIsFollowing(users: List<User>): Map<User, Boolean> {
         val current = currentUser() ?: return users.associateWith { false }
