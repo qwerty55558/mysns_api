@@ -8,6 +8,9 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface PostRepository : JpaRepository<Post, Long> {
+
+    @Query("SELECT p.authorId FROM Post p WHERE p.id = :id")
+    fun findAuthorId(@Param("id") id: Long): Long?
     fun findAllByOrderByCreatedAtDesc(pageable: Pageable): List<Post>
     fun findByAuthorIdOrderByCreatedAtDesc(authorId: Long, pageable: Pageable): List<Post>
 

@@ -1,5 +1,7 @@
 package com.mysns.main.graphql.data
 
+import com.mysns.main.graphql.notification.NotificationEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -9,12 +11,24 @@ import org.springframework.transaction.annotation.Transactional
 class LikeStore(
     private val likeRepository: LikeRepository,
     private val postRepository: PostRepository,
+    private val events: ApplicationEventPublisher,
 ) {
     @Transactional
     fun like(userId: Long, postId: Long): Boolean {
         val inserted = likeRepository.insertIfAbsent(userId, postId)
         if (inserted == 0) return false
         postRepository.incrementLikeCount(postId)
+        val authorId = postRepository.findAuthorId(postId)
+        if (authorId != null) {
+            events.publishEvent(
+                NotificationEvent(
+                    recipientId = authorId,
+                    actorId = userId,
+                    type = NotificationType.POST_LIKE,
+                    entityId = postId,
+                )
+            )
+        }
         return true
     }
 

@@ -128,7 +128,7 @@ class UserController(
         if (request.targetId != current.userId) {
             throw AccessDeniedException("only the target can accept this request")
         }
-        followStore.follow(request.requesterId, request.targetId)
+        followStore.acceptRequest(request.requesterId, request.targetId)
         followRequestStore.delete(request)
         return userStore.findById(request.requesterId)!!
     }

@@ -1,5 +1,24 @@
 scalar DateTime
 
+enum NotificationType {
+    FOLLOW
+    FOLLOW_REQUEST
+    FOLLOW_ACCEPTED
+    POST_LIKE
+    COMMENT
+    COMMENT_LIKE
+}
+
+type Notification {
+    id: ID!
+    type: NotificationType!
+    actor: User!
+    post: Post
+    comment: Comment
+    read: Boolean!
+    createdAt: DateTime!
+}
+
 type Query {
     me: User
     user(id: ID!): User
@@ -21,6 +40,10 @@ type Query {
     outgoingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
     # 헤더 뱃지용. 미응답 받은 요청 수.
     incomingFollowRequestCount: Int!
+
+    # Notifications
+    notifications(limit: Int! = 20, offset: Int! = 0): [Notification!]!
+    unreadNotificationCount: Int!
 
     # Direct Messages
     # 내 대화 목록 (최근 활동순).
@@ -81,6 +104,10 @@ type Mutation {
 
     # Profile
     updateMe(input: UpdateMeInput!): User!
+
+    # Notifications
+    markNotificationRead(id: ID!): Boolean!
+    markAllNotificationsRead: Boolean!
 
     # Direct Messages
     # 텍스트 또는 게시물 공유 전송. 대화가 없으면 생성. sharedPostId가 있으면 그 게시물 shareCount 증가.
