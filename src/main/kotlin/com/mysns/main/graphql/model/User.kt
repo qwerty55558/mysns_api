@@ -28,7 +28,7 @@ class User(
     val createdAt: OffsetDateTime,
 
     @Column(length = 512)
-    val avatarUrl: String? = null,
+    var avatarUrl: String? = null,
 
     @Column(nullable = false)
     val passwordHash: String,

@@ -194,6 +194,7 @@ input UpdateMeInput {
     displayName: String
     bio: String
     privateAccount: Boolean
+    avatarUrl: String
 }
 
 type Post {

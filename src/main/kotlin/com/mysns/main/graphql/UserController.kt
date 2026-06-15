@@ -154,6 +154,7 @@ class UserController(
             displayName = input.displayName?.trim()?.takeIf { it.isNotEmpty() },
             bio = input.bio,
             privateAccount = input.privateAccount,
+            avatarUrl = input.avatarUrl?.trim(),
         )
     }
 

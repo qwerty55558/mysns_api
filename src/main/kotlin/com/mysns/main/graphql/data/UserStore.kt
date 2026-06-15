@@ -54,6 +54,7 @@ class UserStore(
         displayName: String? = null,
         bio: String? = null,
         privateAccount: Boolean? = null,
+        avatarUrl: String? = null,
     ): User {
         val user = userRepository.findById(userId).orElseThrow {
             IllegalStateException("user not found: $userId")
@@ -61,6 +62,7 @@ class UserStore(
         if (displayName != null) user.displayName = displayName
         if (bio != null) user.bio = bio.ifBlank { null }
         if (privateAccount != null) user.privateAccount = privateAccount
+        if (avatarUrl != null) user.avatarUrl = avatarUrl.ifBlank { null }
         return userRepository.save(user)
     }
 }
