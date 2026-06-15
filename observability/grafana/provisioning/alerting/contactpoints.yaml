@@ -1,0 +1,10 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: discord-ops
+    receivers:
+      - uid: discord_ops_1
+        type: discord
+        settings:
+          url: ${DISCORD_ALERT_WEBHOOK_URL}
+        disableResolveMessage: false
