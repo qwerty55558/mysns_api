@@ -9,6 +9,12 @@ type Query {
     bookmarks(limit: Int! = 20, offset: Int! = 0): [Post!]!
     analyzeReceipt(imageUrl: String!): ReceiptAnalysis
 
+    # Search
+    # 유저 검색 (username/displayName 부분일치, 팔로워순).
+    searchUsers(query: String!, limit: Int! = 20, offset: Int! = 0): [User!]!
+    # 게시물/해시태그 검색 (content/tag/item 부분일치, 선행 # 무시, 최신순).
+    searchPosts(query: String!, limit: Int! = 20, offset: Int! = 0): [Post!]!
+
     # 비공개 계정에서 들어온 팔로우 요청. 본인 받은 것만 노출.
     incomingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
     # 내가 보낸 팔로우 요청 (pending 만).

@@ -1,6 +1,7 @@
 package com.mysns.main.graphql.data
 
 import com.mysns.main.graphql.model.User
+import org.springframework.data.domain.Pageable
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -9,6 +10,16 @@ import org.springframework.data.repository.query.Param
 interface UserRepository : JpaRepository<User, Long> {
     fun findByUsername(username: String): User?
     fun findFirstByOrderByIdAsc(): User?
+
+    @Query(
+        """
+        SELECT u FROM User u
+        WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(u.displayName) LIKE LOWER(CONCAT('%', :q, '%'))
+        ORDER BY u.followerCount DESC, u.id ASC
+        """,
+    )
+    fun search(@Param("q") q: String, pageable: Pageable): List<User>
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE User u SET u.postCount = u.postCount + 1 WHERE u.id = :id")

@@ -43,6 +43,13 @@ class UserController(
         userStore.findByUsername(username)
 
     @QueryMapping
+    fun searchUsers(
+        @Argument query: String,
+        @Argument limit: Int,
+        @Argument offset: Int,
+    ): List<User> = userStore.search(query, limit, offset)
+
+    @QueryMapping
     @PreAuthorize("isAuthenticated()")
     fun incomingFollowRequests(
         @Argument limit: Int,
