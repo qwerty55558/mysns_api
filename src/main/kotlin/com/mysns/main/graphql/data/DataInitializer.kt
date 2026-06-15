@@ -62,7 +62,7 @@ class DataInitializer(
                 displayName = "Alice",
                 bio = "GraphQL fan",
                 createdAt = base,
-                avatarUrl = "https://i.pravatar.cc/150?u=alice",
+                avatarUrl = "/uploads/seed/avatar-alice.jpg",
                 passwordHash = hash,
             )
         )
@@ -72,7 +72,7 @@ class DataInitializer(
                 displayName = "Bob",
                 bio = null,
                 createdAt = base.plusDays(1),
-                avatarUrl = "https://i.pravatar.cc/150?u=bob",
+                avatarUrl = "/uploads/seed/avatar-bob.jpg",
                 passwordHash = hash,
             )
         )
@@ -82,7 +82,7 @@ class DataInitializer(
                 displayName = "Charlie",
                 bio = "lurker",
                 createdAt = base.plusDays(2),
-                avatarUrl = "https://i.pravatar.cc/150?u=charlie",
+                avatarUrl = "/uploads/seed/avatar-charlie.jpg",
                 passwordHash = hash,
             )
         )
@@ -123,7 +123,7 @@ class DataInitializer(
                     content = "오늘 점심: 김치찌개 정식",
                     authorId = alice.id,
                     createdAt = base,
-                    imageUrls = mutableListOf("https://picsum.photos/seed/post1/600/600"),
+                    imageUrls = mutableListOf("/uploads/seed/post1.jpg"),
                     item = "김치찌개 정식",
                     amount = 9000,
                     tag = "백반집",
@@ -154,7 +154,7 @@ class DataInitializer(
                     content = "Bob here — 출퇴근 지하철",
                     authorId = bob.id,
                     createdAt = base.plusHours(2),
-                    imageUrls = mutableListOf("https://picsum.photos/seed/post3/600/600"),
+                    imageUrls = mutableListOf("/uploads/seed/post3.jpg"),
                     item = "지하철 1회권",
                     amount = 1550,
                 )
@@ -166,8 +166,8 @@ class DataInitializer(
                     authorId = alice.id,
                     createdAt = base.plusHours(3),
                     imageUrls = mutableListOf(
-                        "https://picsum.photos/seed/post4a/600/600",
-                        "https://picsum.photos/seed/post4b/600/600",
+                        "/uploads/seed/post4a.jpg",
+                        "/uploads/seed/post4b.jpg",
                     ),
                     item = "장보기",
                     amount = 47800,
@@ -198,7 +198,7 @@ class DataInitializer(
                     content = "Bob's second — 편의점 야식",
                     authorId = bob.id,
                     createdAt = base.plusHours(5),
-                    imageUrls = mutableListOf("https://picsum.photos/seed/post6/600/600"),
+                    imageUrls = mutableListOf("/uploads/seed/post6.jpg"),
                     item = "야식",
                     amount = 8400,
                     place = Place(
@@ -218,7 +218,7 @@ class DataInitializer(
                     content = "charlie 일기 — 오늘은 그냥 산책, 소비 없음",
                     authorId = charlie.id,
                     createdAt = base.plusHours(6),
-                    imageUrls = mutableListOf("https://picsum.photos/seed/post7/600/600"),
+                    imageUrls = mutableListOf("/uploads/seed/post7.jpg"),
                     tag = "일상",
                 )
             ),
@@ -228,7 +228,7 @@ class DataInitializer(
                     content = "alice — 친구가 사준 브런치, 장소 공유만!",
                     authorId = alice.id,
                     createdAt = base.plusHours(7),
-                    imageUrls = mutableListOf("https://picsum.photos/seed/post8/600/600"),
+                    imageUrls = mutableListOf("/uploads/seed/post8.jpg"),
                     place = Place(
                         latitude = 37.5599,
                         longitude = 126.9255,
@@ -246,7 +246,7 @@ class DataInitializer(
                     content = "bob — 한강 산책 좋다 🌊",
                     authorId = bob.id,
                     createdAt = base.plusHours(8),
-                    imageUrls = mutableListOf("https://picsum.photos/seed/post9/600/600"),
+                    imageUrls = mutableListOf("/uploads/seed/post9.jpg"),
                     place = Place(
                         latitude = 37.5283,
                         longitude = 126.9326,
