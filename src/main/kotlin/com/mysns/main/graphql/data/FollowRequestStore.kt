@@ -1,5 +1,7 @@
 package com.mysns.main.graphql.data
 
+import com.mysns.main.graphql.notification.NotificationEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -8,10 +10,23 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class FollowRequestStore(
     private val repository: FollowRequestRepository,
+    private val events: ApplicationEventPublisher,
 ) {
     @Transactional
-    fun create(requesterId: Long, targetId: Long): Boolean =
-        repository.insertIfAbsent(requesterId, targetId) > 0
+    fun create(requesterId: Long, targetId: Long): Boolean {
+        val inserted = repository.insertIfAbsent(requesterId, targetId) > 0
+        if (inserted) {
+            events.publishEvent(
+                NotificationEvent(
+                    recipientId = targetId,
+                    actorId = requesterId,
+                    type = NotificationType.FOLLOW_REQUEST,
+                    entityId = null,
+                )
+            )
+        }
+        return inserted
+    }
 
     fun findById(id: Long): FollowRequest? = repository.findById(id).orElse(null)
 

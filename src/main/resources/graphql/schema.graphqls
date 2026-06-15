@@ -1,5 +1,24 @@
 scalar DateTime
 
+enum NotificationType {
+    FOLLOW
+    FOLLOW_REQUEST
+    FOLLOW_ACCEPTED
+    POST_LIKE
+    COMMENT
+    COMMENT_LIKE
+}
+
+type Notification {
+    id: ID!
+    type: NotificationType!
+    actor: User!
+    post: Post
+    comment: Comment
+    read: Boolean!
+    createdAt: DateTime!
+}
+
 type Query {
     me: User
     user(id: ID!): User
@@ -9,12 +28,22 @@ type Query {
     bookmarks(limit: Int! = 20, offset: Int! = 0): [Post!]!
     analyzeReceipt(imageUrl: String!): ReceiptAnalysis
 
+    # Search
+    # 유저 검색 (username/displayName 부분일치, 팔로워순).
+    searchUsers(query: String!, limit: Int! = 20, offset: Int! = 0): [User!]!
+    # 게시물/해시태그 검색 (content/tag/item 부분일치, 선행 # 무시, 최신순).
+    searchPosts(query: String!, limit: Int! = 20, offset: Int! = 0): [Post!]!
+
     # 비공개 계정에서 들어온 팔로우 요청. 본인 받은 것만 노출.
     incomingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
     # 내가 보낸 팔로우 요청 (pending 만).
     outgoingFollowRequests(limit: Int! = 20, offset: Int! = 0): [FollowRequest!]!
     # 헤더 뱃지용. 미응답 받은 요청 수.
     incomingFollowRequestCount: Int!
+
+    # Notifications
+    notifications(limit: Int! = 20, offset: Int! = 0): [Notification!]!
+    unreadNotificationCount: Int!
 
     # Direct Messages
     # 내 대화 목록 (최근 활동순).
@@ -27,6 +56,12 @@ type Query {
     messages(conversationId: ID!, limit: Int! = 30, offset: Int! = 0): [Message!]!
     # 헤더 뱃지용. 안읽은 메시지 총합.
     unreadMessageCount: Int!
+
+    # Wallet (모의 잔액)
+    # 내 지갑 (최초 조회 시 자동 생성 + 시작 잔액 충전).
+    myWallet: Wallet!
+    # 내 거래내역 (최신순).
+    walletTransactions(limit: Int! = 20, offset: Int! = 0): [WalletTransaction!]!
 }
 
 type ReceiptAnalysis {
@@ -76,11 +111,54 @@ type Mutation {
     # Profile
     updateMe(input: UpdateMeInput!): User!
 
+    # Notifications
+    markNotificationRead(id: ID!): Boolean!
+    markAllNotificationsRead: Boolean!
+
     # Direct Messages
     # 텍스트 또는 게시물 공유 전송. 대화가 없으면 생성. sharedPostId가 있으면 그 게시물 shareCount 증가.
     sendMessage(input: SendMessageInput!): Message!
     # 대화를 읽음 처리 (안읽음 뱃지 해제).
     markConversationRead(conversationId: ID!): Conversation!
+
+    # Wallet / 송금 (모의 잔액)
+    # 잔액 충전.
+    topUpWallet(amount: Int!, memo: String): Wallet!
+    # 잔액 출금.
+    withdrawWallet(amount: Int!, memo: String): Wallet!
+    # 유저간 P2P 송금. 보낸 사람 거래(TRANSFER_OUT) 반환.
+    transfer(input: TransferInput!): WalletTransaction!
+}
+
+enum WalletTransactionType {
+    TOPUP
+    WITHDRAW
+    TRANSFER_OUT
+    TRANSFER_IN
+}
+
+type Wallet {
+    id: ID!
+    balance: Int!
+    owner: User!
+    createdAt: DateTime!
+}
+
+type WalletTransaction {
+    id: ID!
+    type: WalletTransactionType!
+    amount: Int!
+    balanceAfter: Int!
+    # 송금 상대 (충전/출금은 null).
+    counterparty: User
+    memo: String
+    createdAt: DateTime!
+}
+
+input TransferInput {
+    recipientId: ID!
+    amount: Int!
+    memo: String
 }
 
 type User {
@@ -116,6 +194,7 @@ input UpdateMeInput {
     displayName: String
     bio: String
     privateAccount: Boolean
+    avatarUrl: String
 }
 
 type Post {

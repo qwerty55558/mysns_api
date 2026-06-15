@@ -1,5 +1,7 @@
 package com.mysns.main.graphql.data
 
+import com.mysns.main.graphql.notification.NotificationEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -9,14 +11,50 @@ import org.springframework.transaction.annotation.Transactional
 class FollowStore(
     private val followRepository: FollowRepository,
     private val userRepository: UserRepository,
+    private val events: ApplicationEventPublisher,
 ) {
-    @Transactional
-    fun follow(followerId: Long, followeeId: Long): Boolean {
+    /**
+     * Inserts the follow row and updates counters. Returns true if a new row was created.
+     */
+    private fun insertFollow(followerId: Long, followeeId: Long): Boolean {
         val inserted = followRepository.insertIfAbsent(followerId, followeeId)
         if (inserted == 0) return false
         userRepository.incrementFollowingCount(followerId)
         userRepository.incrementFollowerCount(followeeId)
         return true
+    }
+
+    @Transactional
+    fun follow(followerId: Long, followeeId: Long): Boolean {
+        val created = insertFollow(followerId, followeeId)
+        if (created) {
+            events.publishEvent(
+                NotificationEvent(
+                    recipientId = followeeId,
+                    actorId = followerId,
+                    type = NotificationType.FOLLOW,
+                    entityId = null,
+                )
+            )
+        }
+        return created
+    }
+
+    /** Called when accepting a follow request — performs the same insert/count logic but publishes FOLLOW_ACCEPTED to the requester. */
+    @Transactional
+    fun acceptRequest(requesterId: Long, targetId: Long): Boolean {
+        val created = insertFollow(requesterId, targetId)
+        if (created) {
+            events.publishEvent(
+                NotificationEvent(
+                    recipientId = requesterId,
+                    actorId = targetId,
+                    type = NotificationType.FOLLOW_ACCEPTED,
+                    entityId = null,
+                )
+            )
+        }
+        return created
     }
 
     @Transactional

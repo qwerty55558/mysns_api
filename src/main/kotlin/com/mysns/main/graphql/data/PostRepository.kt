@@ -8,8 +8,22 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface PostRepository : JpaRepository<Post, Long> {
+
+    @Query("SELECT p.authorId FROM Post p WHERE p.id = :id")
+    fun findAuthorId(@Param("id") id: Long): Long?
     fun findAllByOrderByCreatedAtDesc(pageable: Pageable): List<Post>
     fun findByAuthorIdOrderByCreatedAtDesc(authorId: Long, pageable: Pageable): List<Post>
+
+    @Query(
+        """
+        SELECT p FROM Post p
+        WHERE LOWER(p.content) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(p.tag) LIKE LOWER(CONCAT('%', :q, '%'))
+           OR LOWER(p.item) LIKE LOWER(CONCAT('%', :q, '%'))
+        ORDER BY p.createdAt DESC
+        """,
+    )
+    fun search(@Param("q") q: String, pageable: Pageable): List<Post>
 
     @Modifying(clearAutomatically = true)
     @Query("UPDATE Post p SET p.likeCount = p.likeCount + 1 WHERE p.id = :id")

@@ -1,6 +1,7 @@
 package com.mysns.main.graphql.data
 
 import com.mysns.main.graphql.model.User
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.OffsetDateTime
@@ -16,6 +17,13 @@ class UserStore(
         if (ids.isEmpty()) emptyList() else userRepository.findAllById(ids)
 
     fun findByUsername(username: String): User? = userRepository.findByUsername(username)
+
+    fun search(query: String, limit: Int, offset: Int): List<User> {
+        val q = query.trim()
+        if (q.isEmpty()) return emptyList()
+        val size = limit.coerceAtLeast(1)
+        return userRepository.search(q, PageRequest.of(offset / size, size))
+    }
 
     fun first(): User? = userRepository.findFirstByOrderByIdAsc()
 
@@ -46,6 +54,7 @@ class UserStore(
         displayName: String? = null,
         bio: String? = null,
         privateAccount: Boolean? = null,
+        avatarUrl: String? = null,
     ): User {
         val user = userRepository.findById(userId).orElseThrow {
             IllegalStateException("user not found: $userId")
@@ -53,6 +62,7 @@ class UserStore(
         if (displayName != null) user.displayName = displayName
         if (bio != null) user.bio = bio.ifBlank { null }
         if (privateAccount != null) user.privateAccount = privateAccount
+        if (avatarUrl != null) user.avatarUrl = avatarUrl.ifBlank { null }
         return userRepository.save(user)
     }
 }

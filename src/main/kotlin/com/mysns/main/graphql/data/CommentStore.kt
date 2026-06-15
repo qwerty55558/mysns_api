@@ -1,6 +1,8 @@
 package com.mysns.main.graphql.data
 
 import com.mysns.main.graphql.model.Comment
+import com.mysns.main.graphql.notification.NotificationEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -12,6 +14,7 @@ class CommentStore(
     private val commentRepository: CommentRepository,
     private val commentLikeRepository: CommentLikeRepository,
     private val postRepository: PostRepository,
+    private val events: ApplicationEventPublisher,
 ) {
     fun findById(id: Long): Comment? = commentRepository.findById(id).orElse(null)
 
@@ -39,6 +42,17 @@ class CommentStore(
             )
         )
         postRepository.incrementCommentCount(postId)
+        val postAuthor = postRepository.findAuthorId(postId)
+        if (postAuthor != null) {
+            events.publishEvent(
+                NotificationEvent(
+                    recipientId = postAuthor,
+                    actorId = authorId,
+                    type = NotificationType.COMMENT,
+                    entityId = saved.id,
+                )
+            )
+        }
         return saved
     }
 

@@ -4,4 +4,5 @@ data class UpdateMeInput(
     val displayName: String? = null,
     val bio: String? = null,
     val privateAccount: Boolean? = null,
+    val avatarUrl: String? = null,
 )

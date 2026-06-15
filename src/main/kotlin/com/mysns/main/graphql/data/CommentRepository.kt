@@ -9,6 +9,9 @@ import org.springframework.data.repository.query.Param
 
 
 interface CommentRepository : JpaRepository<Comment, Long> {
+
+    @Query("SELECT c.authorId FROM Comment c WHERE c.id = :id")
+    fun findAuthorId(@Param("id") id: Long): Long?
     fun findByPostIdOrderByCreatedAtAsc(postId: Long, pageable: Pageable): List<Comment>
     fun findByPostId(postId: Long): List<Comment>
     fun deleteByPostId(postId: Long): Long

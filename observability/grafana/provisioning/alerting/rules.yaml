@@ -1,0 +1,258 @@
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: mysns-core
+    folder: mysns-alerts
+    interval: 1m
+    rules:
+      - uid: mysns_app_down
+        title: "앱 다운 (mysns-be)"
+        condition: C
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "mysns 백엔드 스크랩 타깃 down"
+          description: "up==0. 컨테이너/프로세스 상태와 8080 헬스 확인."
+        noDataState: Alerting
+        execErrState: Alerting
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: VictoriaMetrics
+            model:
+              datasource: { type: prometheus, uid: VictoriaMetrics }
+              editorMode: code
+              expr: 'up{job="mysns-be"}'
+              instant: false
+              range: true
+              intervalMs: 15000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: lt, params: [1] }
+              refId: C
+
+      - uid: mysns_error_rate
+        title: "5xx 에러율 > 5%"
+        condition: C
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "5xx 비율 5% 초과"
+          description: "최근 5분 5xx/전체. Loki에서 level=ERROR + traceId로 추적."
+        noDataState: OK
+        execErrState: Alerting
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: VictoriaMetrics
+            model:
+              datasource: { type: prometheus, uid: VictoriaMetrics }
+              editorMode: code
+              expr: 'sum(rate(http_server_requests_seconds_count{app="mysns",status=~"5.."}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{app="mysns"}[5m])), 0.001)'
+              instant: false
+              range: true
+              intervalMs: 15000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0.05] }
+              refId: C
+
+      - uid: mysns_latency_p95
+        title: "지연 p95 > 1s"
+        condition: C
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP p95 지연 1초 초과"
+          description: "uri별 p95 대시보드 패널 확인. 느린 쿼리/N+1 의심."
+        noDataState: OK
+        execErrState: OK
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: VictoriaMetrics
+            model:
+              datasource: { type: prometheus, uid: VictoriaMetrics }
+              editorMode: code
+              expr: 'histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{app="mysns"}[5m])))'
+              instant: false
+              range: true
+              intervalMs: 15000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [1] }
+              refId: C
+
+      - uid: mysns_heap_pressure
+        title: "JVM Heap > 90%"
+        condition: C
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "힙 사용률 90% 초과 (OOM 위험)"
+          description: "RAM 최소화 프로젝트 핵심 신호. 누수/캐시/-Xmx 점검."
+        noDataState: OK
+        execErrState: OK
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: VictoriaMetrics
+            model:
+              datasource: { type: prometheus, uid: VictoriaMetrics }
+              editorMode: code
+              expr: 'sum(jvm_memory_used_bytes{app="mysns",area="heap"}) / clamp_min(sum(jvm_memory_max_bytes{app="mysns",area="heap"}), 1)'
+              instant: false
+              range: true
+              intervalMs: 15000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0.9] }
+              refId: C
+
+      - uid: mysns_db_pool
+        title: "DB 커넥션 풀 고갈 임박"
+        condition: C
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Hikari active/max > 90%"
+          description: "풀 고갈 임박. 장기 트랜잭션/커넥션 누수/슬로우쿼리 확인."
+        noDataState: OK
+        execErrState: OK
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: VictoriaMetrics
+            model:
+              datasource: { type: prometheus, uid: VictoriaMetrics }
+              editorMode: code
+              expr: 'sum(hikaricp_connections_active{app="mysns"}) / clamp_min(sum(hikaricp_connections_max{app="mysns"}), 1)'
+              instant: false
+              range: true
+              intervalMs: 15000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [0.9] }
+              refId: C
+
+      - uid: mysns_error_logs
+        title: "ERROR 로그 급증"
+        condition: C
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "5분간 ERROR 로그 10건 초과"
+          description: "Loki에서 해당 구간 로그/traceId 확인."
+        noDataState: OK
+        execErrState: OK
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: Loki
+            model:
+              datasource: { type: loki, uid: Loki }
+              editorMode: code
+              expr: 'sum(count_over_time({app="mysns",level="ERROR"}[5m]))'
+              instant: false
+              range: true
+              intervalMs: 15000
+              maxDataPoints: 43200
+              refId: A
+          - refId: B
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: reduce
+              reducer: last
+              expression: A
+              refId: B
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              datasource: { type: __expr__, uid: __expr__ }
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: { type: gt, params: [10] }
+              refId: C

@@ -42,6 +42,13 @@ class PostController(
         postStore.feed(limit, offset)
 
     @QueryMapping
+    fun searchPosts(
+        @Argument query: String,
+        @Argument limit: Int,
+        @Argument offset: Int,
+    ): List<Post> = postStore.search(query, limit, offset)
+
+    @QueryMapping
     @PreAuthorize("isAuthenticated()")
     fun bookmarks(@Argument limit: Int, @Argument offset: Int): List<Post> {
         val current = requireCurrentUser()

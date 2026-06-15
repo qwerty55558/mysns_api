@@ -43,6 +43,13 @@ class UserController(
         userStore.findByUsername(username)
 
     @QueryMapping
+    fun searchUsers(
+        @Argument query: String,
+        @Argument limit: Int,
+        @Argument offset: Int,
+    ): List<User> = userStore.search(query, limit, offset)
+
+    @QueryMapping
     @PreAuthorize("isAuthenticated()")
     fun incomingFollowRequests(
         @Argument limit: Int,
@@ -121,7 +128,7 @@ class UserController(
         if (request.targetId != current.userId) {
             throw AccessDeniedException("only the target can accept this request")
         }
-        followStore.follow(request.requesterId, request.targetId)
+        followStore.acceptRequest(request.requesterId, request.targetId)
         followRequestStore.delete(request)
         return userStore.findById(request.requesterId)!!
     }
@@ -147,6 +154,7 @@ class UserController(
             displayName = input.displayName?.trim()?.takeIf { it.isNotEmpty() },
             bio = input.bio,
             privateAccount = input.privateAccount,
+            avatarUrl = input.avatarUrl?.trim(),
         )
     }
 
