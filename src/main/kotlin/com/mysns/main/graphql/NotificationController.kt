@@ -6,6 +6,8 @@ import com.mysns.main.graphql.data.Notification
 import com.mysns.main.graphql.data.NotificationStore
 import com.mysns.main.graphql.data.NotificationType
 import com.mysns.main.graphql.data.PostStore
+import com.mysns.main.graphql.data.SplitBill
+import com.mysns.main.graphql.data.SplitBillStore
 import com.mysns.main.graphql.data.UserStore
 import com.mysns.main.graphql.model.Comment
 import com.mysns.main.graphql.model.Post
@@ -23,6 +25,7 @@ class NotificationController(
     private val userStore: UserStore,
     private val postStore: PostStore,
     private val commentStore: CommentStore,
+    private val splitBillStore: SplitBillStore,
 ) {
 
     @QueryMapping
@@ -82,6 +85,21 @@ class NotificationController(
         for (n in commentNotifications) {
             val commentId = n.entityId ?: continue
             byId[commentId]?.let { result[n] = it }
+        }
+        return result
+    }
+
+    @BatchMapping(typeName = "Notification", field = "splitBill")
+    fun splitBill(ns: List<Notification>): Map<Notification, SplitBill> {
+        val splitNotifications = ns.filter { it.type == NotificationType.SPLIT_REQUEST }
+        if (splitNotifications.isEmpty()) return emptyMap()
+        val ids = splitNotifications.mapNotNull { it.entityId }.toSet()
+        if (ids.isEmpty()) return emptyMap()
+        val byId = splitBillStore.findBills(ids).associateBy { it.id }
+        val result = HashMap<Notification, SplitBill>()
+        for (n in splitNotifications) {
+            val billId = n.entityId ?: continue
+            byId[billId]?.let { result[n] = it }
         }
         return result
     }

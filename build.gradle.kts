@@ -45,6 +45,10 @@ dependencies {
 	testImplementation("org.springframework.graphql:spring-graphql-test")
 	testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+	testRuntimeOnly("com.h2database:h2")
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
 }
 
 kotlin {
@@ -66,4 +70,12 @@ allOpen {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// colima 환경에서 Testcontainers가 Docker 소켓을 찾을 수 있도록 설정.
+	// DOCKER_HOST 환경변수가 이미 설정된 경우 덮어쓰지 않는다.
+	val userHome = System.getProperty("user.home")
+	val colimaSocketPath = "$userHome/.colima/default/docker.sock"
+	val colimaSocket = "unix://$colimaSocketPath"
+	environment("DOCKER_HOST", System.getenv("DOCKER_HOST") ?: colimaSocket)
+	environment("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", System.getenv("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE") ?: colimaSocketPath)
+	environment("TESTCONTAINERS_RYUK_DISABLED", System.getenv("TESTCONTAINERS_RYUK_DISABLED") ?: "true")
 }

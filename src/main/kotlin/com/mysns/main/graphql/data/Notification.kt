@@ -12,7 +12,7 @@ import jakarta.persistence.Table
 import java.time.OffsetDateTime
 
 enum class NotificationType {
-    FOLLOW, FOLLOW_REQUEST, FOLLOW_ACCEPTED, POST_LIKE, COMMENT, COMMENT_LIKE
+    FOLLOW, FOLLOW_REQUEST, FOLLOW_ACCEPTED, POST_LIKE, COMMENT, COMMENT_LIKE, SPLIT_REQUEST
 }
 
 @Entity
