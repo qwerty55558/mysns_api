@@ -1,5 +1,7 @@
 package com.mysns.main.graphql.data
 
+import com.mysns.main.graphql.notification.MessageSentEvent
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -11,6 +13,7 @@ class MessageStore(
     private val messageRepository: MessageRepository,
     private val conversationStore: ConversationStore,
     private val postStore: PostStore,
+    private val events: ApplicationEventPublisher,
 ) {
     @Transactional
     fun send(senderId: Long, recipientId: Long, text: String?, sharedPostId: Long?): Message {
@@ -34,6 +37,14 @@ class MessageStore(
         conversationStore.markRead(conversation, senderId, now)
         // 게시물 공유는 share 행위 — 기존 sharePost와 동일하게 shareCount 증가.
         if (sharedPostId != null) postStore.incrementShareCount(sharedPostId)
+        events.publishEvent(
+            MessageSentEvent(
+                recipientId = recipientId,
+                senderId = senderId,
+                conversationId = conversation.id,
+                messageId = saved.id,
+            )
+        )
         return saved
     }
 

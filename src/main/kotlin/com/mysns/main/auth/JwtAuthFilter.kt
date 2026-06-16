@@ -21,28 +21,47 @@ class JwtAuthFilter(private val jwtProvider: JwtProvider) : OncePerRequestFilter
         filterChain: FilterChain,
     ) {
         val header = request.getHeader("Authorization")
-        if (header == null || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response)
+        if (header != null && header.startsWith("Bearer ")) {
+            // Bearer header path — existing behavior unchanged (401 on parse failure)
+            val token = header.removePrefix("Bearer ").trim()
+            try {
+                val parsed = jwtProvider.parseAccess(token)
+                val principal = AuthenticatedUser(parsed.userId, parsed.username)
+                val auth = UsernamePasswordAuthenticationToken(
+                    principal,
+                    null,
+                    listOf(SimpleGrantedAuthority("ROLE_USER")),
+                )
+                SecurityContextHolder.getContext().authentication = auth
+                filterChain.doFilter(request, response)
+            } catch (e: ExpiredJwtException) {
+                log.debug("expired JWT: {}", e.message)
+                writeUnauthorized(response, "토큰이 만료되었습니다", "TOKEN_EXPIRED")
+            } catch (e: JwtException) {
+                log.debug("invalid JWT: {}", e.message)
+                writeUnauthorized(response, "유효하지 않은 토큰입니다", "TOKEN_INVALID")
+            }
             return
         }
-        val token = header.removePrefix("Bearer ").trim()
-        try {
-            val parsed = jwtProvider.parseAccess(token)
-            val principal = AuthenticatedUser(parsed.userId, parsed.username)
-            val auth = UsernamePasswordAuthenticationToken(
-                principal,
-                null,
-                listOf(SimpleGrantedAuthority("ROLE_USER")),
-            )
-            SecurityContextHolder.getContext().authentication = auth
-            filterChain.doFilter(request, response)
-        } catch (e: ExpiredJwtException) {
-            log.debug("expired JWT: {}", e.message)
-            writeUnauthorized(response, "토큰이 만료되었습니다", "TOKEN_EXPIRED")
-        } catch (e: JwtException) {
-            log.debug("invalid JWT: {}", e.message)
-            writeUnauthorized(response, "유효하지 않은 토큰입니다", "TOKEN_INVALID")
+
+        // Query-param fallback for SSE clients (EventSource cannot send Authorization headers)
+        val queryToken = request.getParameter("token")
+        if (queryToken != null) {
+            try {
+                val parsed = jwtProvider.parseAccess(queryToken)
+                val principal = AuthenticatedUser(parsed.userId, parsed.username)
+                val auth = UsernamePasswordAuthenticationToken(
+                    principal,
+                    null,
+                    listOf(SimpleGrantedAuthority("ROLE_USER")),
+                )
+                SecurityContextHolder.getContext().authentication = auth
+            } catch (e: Exception) {
+                log.debug("query-param token parse failed, continuing unauthenticated: {}", e.message)
+            }
         }
+
+        filterChain.doFilter(request, response)
     }
 
     private fun writeUnauthorized(response: HttpServletResponse, message: String, code: String) {
