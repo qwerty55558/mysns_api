@@ -13,4 +13,7 @@ class NotificationSseController(
 ) {
     @GetMapping("/notifications/stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
     fun stream(): SseEmitter = registry.register(requireCurrentUser().userId)
+
+    @GetMapping("/events/stream", produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    fun events(): SseEmitter = registry.register(requireCurrentUser().userId)
 }

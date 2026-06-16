@@ -38,12 +38,12 @@ class NotificationSseRegistry {
         return emitter
     }
 
-    fun push(userId: Long, payload: Any) {
+    fun push(userId: Long, eventName: String, payload: Any) {
         val list = emitters[userId] ?: return
         val dead = mutableListOf<SseEmitter>()
         for (emitter in list) {
             try {
-                emitter.send(SseEmitter.event().name("notification").data(payload))
+                emitter.send(SseEmitter.event().name(eventName).data(payload))
             } catch (ex: Exception) {
                 dead.add(emitter)
                 try {
@@ -54,6 +54,8 @@ class NotificationSseRegistry {
         }
         if (dead.isNotEmpty()) list.removeAll(dead)
     }
+
+    fun push(userId: Long, payload: Any) = push(userId, "notification", payload)
 
     @Scheduled(fixedRate = 20_000)
     fun heartbeat() {
