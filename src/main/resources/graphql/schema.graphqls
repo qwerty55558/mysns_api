@@ -7,6 +7,7 @@ enum NotificationType {
     POST_LIKE
     COMMENT
     COMMENT_LIKE
+    SPLIT_REQUEST
 }
 
 type Notification {
@@ -15,6 +16,7 @@ type Notification {
     actor: User!
     post: Post
     comment: Comment
+    splitBill: SplitBill
     read: Boolean!
     createdAt: DateTime!
 }
@@ -62,6 +64,14 @@ type Query {
     myWallet: Wallet!
     # 내 거래내역 (최신순).
     walletTransactions(limit: Int! = 20, offset: Int! = 0): [WalletTransaction!]!
+
+    # N빵(더치페이) 정산
+    # 정산 상세 (개설자 또는 참가자만 조회 가능).
+    splitBill(id: ID!): SplitBill
+    # 내가 개설한 정산 목록 (최신순).
+    mySplitBills(limit: Int! = 20, offset: Int! = 0): [SplitBill!]!
+    # 내가 응답 대기 중인 정산 요청 (최신순).
+    pendingSplitRequests(limit: Int! = 20, offset: Int! = 0): [SplitParticipant!]!
 }
 
 type ReceiptAnalysis {
@@ -128,6 +138,15 @@ type Mutation {
     withdrawWallet(amount: Int!, memo: String): Wallet!
     # 유저간 P2P 송금. 보낸 사람 거래(TRANSFER_OUT) 반환.
     transfer(input: TransferInput!): WalletTransaction!
+
+    # N빵(더치페이) 정산 생성. 태그된 유저에게 요청이 가고, 수락 시 각자 몫이 개설자에게 송금됨.
+    createSplit(input: CreateSplitInput!): SplitBill!
+    # 정산 요청 수락 — 내 몫을 개설자에게 송금.
+    acceptSplit(splitBillId: ID!): SplitParticipant!
+    # 정산 요청 거절.
+    declineSplit(splitBillId: ID!): SplitParticipant!
+    # 정산 취소 (개설자만, 진행 중일 때).
+    cancelSplit(splitBillId: ID!): SplitBill!
 }
 
 enum WalletTransactionType {
@@ -135,11 +154,16 @@ enum WalletTransactionType {
     WITHDRAW
     TRANSFER_OUT
     TRANSFER_IN
+    SPLIT_HOLD
+    SPLIT_REFUND
+    SPLIT_SETTLE_IN
 }
 
 type Wallet {
     id: ID!
     balance: Int!
+    # 정산 완료 전까지 묶인(예치된) 잔액 — 지출 불가.
+    held: Int!
     owner: User!
     createdAt: DateTime!
 }
@@ -159,6 +183,55 @@ input TransferInput {
     recipientId: ID!
     amount: Int!
     memo: String
+}
+
+enum SplitBillStatus {
+    OPEN
+    SETTLED
+    CANCELLED
+}
+
+enum SplitParticipantStatus {
+    PENDING
+    ACCEPTED
+    DECLINED
+}
+
+# N빵(더치페이) 정산 요청.
+type SplitBill {
+    id: ID!
+    creator: User!
+    totalAmount: Int!
+    memo: String
+    status: SplitBillStatus!
+    participants: [SplitParticipant!]!
+    createdAt: DateTime!
+}
+
+type SplitParticipant {
+    id: ID!
+    bill: SplitBill!
+    user: User!
+    percent: Int!
+    shareAmount: Int!
+    # 개설자 본인 여부(표시용, 실제 차감 없음).
+    isCreator: Boolean!
+    status: SplitParticipantStatus!
+    respondedAt: DateTime
+}
+
+input CreateSplitInput {
+    totalAmount: Int!
+    memo: String
+    # 개설자 본인 비율(%, 생략 시 균등 분배 대상). 개설자 몫은 표시만 되고 실제 차감되지 않음.
+    creatorPercent: Int
+    # 태그된 정산 대상(개설자 제외). percent 생략 시 균등 분배.
+    participants: [SplitParticipantInput!]!
+}
+
+input SplitParticipantInput {
+    userId: ID!
+    percent: Int
 }
 
 type User {

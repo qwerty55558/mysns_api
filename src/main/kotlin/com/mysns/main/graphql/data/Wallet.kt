@@ -11,9 +11,11 @@ import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.OffsetDateTime
 
-/** 모의 지갑 거래 종류. 충전/출금은 counterparty 없음, 송금은 상대 user 참조. */
+/** 모의 지갑 거래 종류. 충전/출금은 counterparty 없음, 송금/정산은 상대 user 참조. */
 enum class WalletTransactionType {
-    TOPUP, WITHDRAW, TRANSFER_OUT, TRANSFER_IN
+    TOPUP, WITHDRAW, TRANSFER_OUT, TRANSFER_IN,
+    // N빵 정산: 예치(잠금) / 환불(해제) / 정산 확정 수금.
+    SPLIT_HOLD, SPLIT_REFUND, SPLIT_SETTLE_IN
 }
 
 @Entity
@@ -29,9 +31,13 @@ class Wallet(
     @Column(name = "owner_id", nullable = false, unique = true)
     val ownerId: Long,
 
-    /** 모의 잔액 (원 단위 정수). */
+    /** 모의 잔액 (원 단위 정수, 지출 가능분). */
     @Column(nullable = false)
     var balance: Int = 0,
+
+    /** 정산 완료 전까지 묶인(예치된) 잔액. 지출 불가, 정산 확정 시 개설자에게 지급되거나 취소 시 balance로 환불. */
+    @Column(nullable = false)
+    var held: Int = 0,
 
     @Column(name = "created_at", nullable = false)
     val createdAt: OffsetDateTime = OffsetDateTime.now(),
