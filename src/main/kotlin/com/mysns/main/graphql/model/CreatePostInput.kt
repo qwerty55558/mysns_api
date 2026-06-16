@@ -1,5 +1,7 @@
 package com.mysns.main.graphql.model
 
+import com.mysns.main.graphql.data.ThemePreset
+
 data class CreatePostInput(
     val content: String,
     val imageUrls: List<String>? = null,
@@ -7,4 +9,5 @@ data class CreatePostInput(
     val item: String? = null,
     val amount: Int? = null,
     val place: PlaceInput? = null,
+    val theme: ThemePreset? = null,
 )

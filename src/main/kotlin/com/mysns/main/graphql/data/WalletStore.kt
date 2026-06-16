@@ -77,6 +77,16 @@ class WalletStore(
         return out
     }
 
+    /** 구독 결제 — 지출가능 잔액에서 금액을 차감하고 거래를 기록한다. 잔액 부족이면 실패. */
+    @Transactional
+    fun charge(ownerId: Long, amount: Int, memo: String?): WalletTransaction {
+        validateAmount(amount)
+        getOrCreate(ownerId)
+        require(walletRepository.debit(ownerId, amount, OffsetDateTime.now()) == 1) { "잔액이 부족합니다." }
+        val wallet = walletRepository.findByOwnerId(ownerId)!!
+        return record(ownerId, WalletTransactionType.SUBSCRIPTION_CHARGE, amount, wallet.balance, null, memo)
+    }
+
     /** 정산 예치 — 참가자의 지출가능 잔액을 묶는다(held). 잔액 부족이면 실패. */
     @Transactional
     fun hold(ownerId: Long, amount: Int, counterpartyId: Long, memo: String?): WalletTransaction {

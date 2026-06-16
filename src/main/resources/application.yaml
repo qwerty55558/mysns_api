@@ -22,6 +22,10 @@ mysns:
     timeout: ${GEMINI_TIMEOUT:30s}
   notification:
     cooldown: 12h
+  subscription:
+    monthly: { price: 3800, months: 1 }
+    yearly:  { price: 38000, months: 12 }
+    renew-cron: "0 0 * * * *"
 
 spring:
   config:
