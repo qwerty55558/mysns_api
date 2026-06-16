@@ -2,6 +2,7 @@ package com.mysns.main.graphql.data
 
 import com.mysns.main.graphql.model.Place
 import com.mysns.main.graphql.model.Post
+import com.mysns.main.graphql.data.ThemePreset
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -44,6 +45,7 @@ class PostStore(
         item: String?,
         amount: Int?,
         place: Place?,
+        theme: ThemePreset? = null,
     ): Post {
         val saved = postRepository.save(
             Post(
@@ -55,6 +57,7 @@ class PostStore(
                 item = item,
                 amount = amount,
                 place = place,
+                theme = theme,
             )
         )
         userRepository.incrementPostCount(authorId)
@@ -69,6 +72,7 @@ class PostStore(
         item: String?,
         amount: Int?,
         place: Place?,
+        theme: ThemePreset? = null,
     ): Post? {
         val existing = postRepository.findById(id).orElse(null) ?: return null
         if (content != null) existing.content = content
@@ -76,6 +80,7 @@ class PostStore(
         if (item != null) existing.item = item
         if (amount != null) existing.amount = amount
         if (place != null) existing.place = place
+        if (theme != null) existing.theme = theme
         existing.updatedAt = OffsetDateTime.now()
         return existing
     }

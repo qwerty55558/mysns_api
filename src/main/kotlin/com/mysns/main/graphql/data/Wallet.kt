@@ -15,7 +15,9 @@ import java.time.OffsetDateTime
 enum class WalletTransactionType {
     TOPUP, WITHDRAW, TRANSFER_OUT, TRANSFER_IN,
     // N빵 정산: 예치(잠금) / 환불(해제) / 정산 확정 수금.
-    SPLIT_HOLD, SPLIT_REFUND, SPLIT_SETTLE_IN
+    SPLIT_HOLD, SPLIT_REFUND, SPLIT_SETTLE_IN,
+    // 구독 결제.
+    SUBSCRIPTION_CHARGE
 }
 
 @Entity

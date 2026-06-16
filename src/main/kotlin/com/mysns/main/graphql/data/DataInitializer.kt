@@ -23,6 +23,7 @@ class DataInitializer(
     private val passwordEncoder: PasswordEncoder,
     private val followStore: FollowStore,
     private val messageStore: MessageStore,
+    private val subscriptionRepository: SubscriptionRepository,
 ) {
 
     private val log = LoggerFactory.getLogger(DataInitializer::class.java)
@@ -40,6 +41,7 @@ class DataInitializer(
         val posts = seedPosts(users)
         seedFollows(users)
         seedConversations(users)
+        seedSubscriptions(users)
 
         log.info(
             "data init done — users={}, posts={}, follows={}, likes={}, bookmarks={}, comments={}",
@@ -98,6 +100,22 @@ class DataInitializer(
         followStore.follow(alice.id, charlie.id)
         followStore.follow(bob.id, alice.id)
         followStore.follow(charlie.id, alice.id)
+    }
+
+    private fun seedSubscriptions(users: Map<String, User>) {
+        val alice = users.getValue("alice")
+        val now = OffsetDateTime.now()
+        // alice는 YEARLY 요금제 OCEAN 테마로 구독 중 (데모용)
+        subscriptionRepository.save(
+            Subscription(
+                ownerId = alice.id,
+                plan = SubscriptionPlan.YEARLY,
+                theme = ThemePreset.OCEAN,
+                price = 38000,
+                startedAt = now,
+                currentPeriodEnd = now.plusMonths(12),
+            )
+        )
     }
 
     private fun seedConversations(users: Map<String, User>) {

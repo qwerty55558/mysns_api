@@ -1,10 +1,13 @@
 package com.mysns.main.graphql.model
 
+import com.mysns.main.graphql.data.ThemePreset
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
 import jakarta.persistence.ElementCollection
 import jakarta.persistence.Embedded
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
@@ -71,4 +74,9 @@ class Post(
 
     @Column(name = "share_count", nullable = false)
     var shareCount: Int = 0,
+
+    /** 게시글 테마 (구독자 전용). null 이면 기본 테마. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16)
+    var theme: ThemePreset? = null,
 )

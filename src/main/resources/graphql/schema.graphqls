@@ -1,5 +1,36 @@
 scalar DateTime
 
+enum ThemePreset {
+    OCEAN
+    SUNSET
+    FOREST
+    AURORA
+    MONO
+    ROSE
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    CANCELLED
+    EXPIRED
+}
+
+enum SubscriptionPlan {
+    MONTHLY
+    YEARLY
+}
+
+type Subscription {
+    id: ID!
+    status: SubscriptionStatus!
+    plan: SubscriptionPlan!
+    theme: ThemePreset!
+    price: Int!
+    autoRenew: Boolean!
+    startedAt: DateTime!
+    currentPeriodEnd: DateTime!
+}
+
 enum NotificationType {
     FOLLOW
     FOLLOW_REQUEST
@@ -72,6 +103,10 @@ type Query {
     mySplitBills(limit: Int! = 20, offset: Int! = 0): [SplitBill!]!
     # 내가 응답 대기 중인 정산 요청 (최신순).
     pendingSplitRequests(limit: Int! = 20, offset: Int! = 0): [SplitParticipant!]!
+
+    # 구독 (프리미엄 멤버십)
+    # 내 구독 정보 (구독 중이 아니면 null).
+    mySubscription: Subscription
 }
 
 type ReceiptAnalysis {
@@ -147,6 +182,14 @@ type Mutation {
     declineSplit(splitBillId: ID!): SplitParticipant!
     # 정산 취소 (개설자만, 진행 중일 때).
     cancelSplit(splitBillId: ID!): SplitBill!
+
+    # 구독 (프리미엄 멤버십)
+    # 구독 신청 (신규 또는 재활성화). 지갑에서 요금 차감.
+    subscribe(input: SubscribeInput!): Subscription!
+    # 구독 테마 변경 (ACTIVE 구독자만).
+    changeSubscriptionTheme(theme: ThemePreset!): Subscription!
+    # 구독 해지 (자동 갱신 비활성화 — 기간 만료 시 EXPIRED 전환).
+    cancelSubscription: Subscription!
 }
 
 enum WalletTransactionType {
@@ -157,6 +200,7 @@ enum WalletTransactionType {
     SPLIT_HOLD
     SPLIT_REFUND
     SPLIT_SETTLE_IN
+    SUBSCRIPTION_CHARGE
 }
 
 type Wallet {
@@ -254,6 +298,12 @@ type User {
     following(limit: Int! = 30, offset: Int! = 0): [User!]!
     # 나를 팔로우하는 사용자 목록 (팔로워 목록).
     followers(limit: Int! = 30, offset: Int! = 0): [User!]!
+    # 구독 여부 (ACTIVE 구독자이면 true).
+    isSubscriber: Boolean!
+    # 현재 활성 테마 (구독자 아니면 null).
+    activeTheme: ThemePreset
+    # 구독 상세 정보 (본인만, 타인 조회 시 null).
+    subscription: Subscription
 }
 
 type FollowRequest {
@@ -289,6 +339,8 @@ type Post {
     previewComment: Comment
     comments(limit: Int! = 20, offset: Int! = 0): [Comment!]!
     likedBy(limit: Int! = 20, offset: Int! = 0): [User!]!
+    # 게시글 테마 (구독자 전용, null이면 기본 테마).
+    theme: ThemePreset
 }
 
 # 카카오 Local API 응답 (place_name, x, y, road_address_name, category_group_name, category_group_code, id)
@@ -338,6 +390,8 @@ input CreatePostInput {
     item: String
     amount: Int
     place: PlaceInput
+    # 게시글 테마 (구독자 전용).
+    theme: ThemePreset
 }
 
 input UpdatePostInput {
@@ -350,6 +404,14 @@ input UpdatePostInput {
     # 리스트 안엔 (1) /uploads/temp/{userId}/... 또는 (2) 이 post의 기존
     # /uploads/posts/{postId}/... URL을 섞어 보낼 수 있다.
     imageUrls: [String!]
+    # 게시글 테마 (구독자 전용).
+    theme: ThemePreset
+}
+
+input SubscribeInput {
+    plan: SubscriptionPlan!
+    theme: ThemePreset!
+    autoRenew: Boolean = true
 }
 
 input PlaceInput {

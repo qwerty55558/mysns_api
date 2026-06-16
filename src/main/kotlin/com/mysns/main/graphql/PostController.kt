@@ -5,6 +5,8 @@ import com.mysns.main.auth.requireCurrentUser
 import com.mysns.main.graphql.data.BookmarkStore
 import com.mysns.main.graphql.data.LikeStore
 import com.mysns.main.graphql.data.PostStore
+import com.mysns.main.graphql.data.SubscriptionStatus
+import com.mysns.main.graphql.data.SubscriptionStore
 import com.mysns.main.graphql.data.UserStore
 import com.mysns.main.graphql.model.Comment
 import com.mysns.main.graphql.model.CreatePostInput
@@ -32,6 +34,7 @@ class PostController(
     private val commentStore: CommentStore,
     private val uploadCommitter: UploadCommitter,
     private val meterRegistry: MeterRegistry,
+    private val subscriptionStore: SubscriptionStore,
 ) {
 
     @QueryMapping
@@ -60,6 +63,13 @@ class PostController(
     @PreAuthorize("isAuthenticated()")
     fun createPost(@Argument input: CreatePostInput): Post {
         val current = requireCurrentUser()
+        // 게시글 테마는 구독자(ACTIVE)만 설정 가능
+        if (input.theme != null) {
+            val sub = subscriptionStore.mySubscription(current.userId)
+            require(sub != null && sub.status == SubscriptionStatus.ACTIVE) {
+                "게시글 테마는 구독자만 설정할 수 있습니다."
+            }
+        }
         val draft = postStore.create(
             authorId = current.userId,
             content = input.content,
@@ -68,6 +78,7 @@ class PostController(
             item = input.item,
             amount = input.amount,
             place = input.place?.toEntity(),
+            theme = input.theme,
         )
         val committed = uploadCommitter.commit(input.imageUrls.orEmpty(), draft.id, current.userId)
         val finalPost = if (committed.isNotEmpty()) {
@@ -91,6 +102,13 @@ class PostController(
         if (existing.authorId != current.userId) {
             throw AccessDeniedException("not the author of this post")
         }
+        // 게시글 테마는 구독자(ACTIVE)만 설정 가능
+        if (input.theme != null) {
+            val sub = subscriptionStore.mySubscription(current.userId)
+            require(sub != null && sub.status == SubscriptionStatus.ACTIVE) {
+                "게시글 테마는 구독자만 설정할 수 있습니다."
+            }
+        }
         val updated = postStore.update(
             postId,
             input.content,
@@ -98,6 +116,7 @@ class PostController(
             input.item,
             input.amount,
             input.place?.toEntity(),
+            input.theme,
         ) ?: throw IllegalStateException("update failed")
 
         if (input.imageUrls != null) {
