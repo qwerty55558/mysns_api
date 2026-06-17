@@ -1,8 +1,11 @@
 # syntax=docker/dockerfile:1
-# amd64 배포용 멀티스테이지 빌드. (Mac arm64에서 빌드해도 linux/amd64 산출물 보장)
+# 크로스 빌드용 멀티스테이지. 대상 아키텍처는 buildx 의 --platform 으로 지정한다:
+#   docker buildx build --platform linux/amd64 -t mysns-api:latest --load .
+# jar 은 아키텍처 중립이므로 빌드 스테이지는 네이티브($BUILDPLATFORM)에서 돌려
+# Gradle 빌드 에뮬레이션을 피하고, arch 가 걸리는 런타임(JRE)만 대상 플랫폼으로 받는다.
 
-### 1) 빌드 스테이지 — JDK 26로 bootJar 생성
-FROM --platform=linux/amd64 eclipse-temurin:26-jdk AS build
+### 1) 빌드 스테이지 — 네이티브 플랫폼에서 JDK 26로 bootJar 생성 (에뮬레이션 없음)
+FROM --platform=$BUILDPLATFORM eclipse-temurin:26-jdk AS build
 WORKDIR /workspace
 
 # 래퍼/빌드 스크립트 먼저 복사해 의존성 레이어 캐시
@@ -15,8 +18,8 @@ COPY src ./src
 RUN ./gradlew --no-daemon clean bootJar -x test \
     && cp "$(ls build/libs/*.jar | grep -v plain | head -n1)" /workspace/app.jar
 
-### 2) 런타임 스테이지 — JRE만, 비루트 실행
-FROM --platform=linux/amd64 eclipse-temurin:26-jre AS runtime
+### 2) 런타임 스테이지 — 대상 플랫폼(buildx --platform)의 JRE, 비루트 실행
+FROM eclipse-temurin:26-jre AS runtime
 WORKDIR /app
 
 # actuator 헬스체크용 curl
