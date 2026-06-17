@@ -26,9 +26,12 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      # default: postgres 통신용 내부망 / payflow-net: nginx·FE 와 공유(컨테이너명 api 로 접근)
-      - default
-      - payflow-net
+      # default: postgres 통신용 내부망 / payflow-net: nginx·FE 와 공유
+      # nginx upstream 이 payflow-backend 로 찾으므로 해당 alias 를 단다.
+      default: {}
+      payflow-net:
+        aliases:
+          - payflow-backend
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mysns
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
