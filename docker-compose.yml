@@ -16,10 +16,11 @@ services:
     restart: unless-stopped
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: mysns-api:latest
+    # GHCR 에 푸시된 amd64 이미지 사용. 빌드는 buildx 로 별도 수행 후 pull.
+    #   docker buildx build --platform linux/amd64 -t ghcr.io/qwerty55558/mysns-api:latest --push .
+    #   docker compose pull api && docker compose up -d
+    image: ghcr.io/qwerty55558/mysns-api:latest
+    pull_policy: always
     container_name: mysns-api
     depends_on:
       postgres:
