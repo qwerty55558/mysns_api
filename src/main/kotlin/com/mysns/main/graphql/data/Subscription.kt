@@ -12,6 +12,8 @@ import jakarta.persistence.Table
 import java.time.OffsetDateTime
 
 enum class ThemePreset { OCEAN, SUNSET, FOREST, AURORA, MONO, ROSE }
+enum class NameEmphasis { NONE, GRADIENT, GLOW, NEON, SPARKLE }
+enum class NameFont { DEFAULT, UNBOUNDED, SYNE, BLACK_HAN_SANS, SPACE_GROTESK }
 
 enum class SubscriptionStatus { ACTIVE, CANCELLED, EXPIRED }
 
@@ -41,6 +43,16 @@ class Subscription(
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
     var theme: ThemePreset,
+
+    /** 이름(아이디) 강조효과 — 구독자 전용. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "name_emphasis", nullable = false, length = 16)
+    var nameEmphasis: NameEmphasis = NameEmphasis.NONE,
+
+    /** 이름(아이디) 표시 폰트 — 구독자 전용. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "name_font", nullable = false, length = 16)
+    var nameFont: NameFont = NameFont.DEFAULT,
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)

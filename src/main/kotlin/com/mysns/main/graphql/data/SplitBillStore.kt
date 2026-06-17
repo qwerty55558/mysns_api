@@ -39,6 +39,12 @@ class SplitBillStore(
         return billRepository.findByCreatorIdOrderByCreatedAtDesc(creatorId, PageRequest.of(offset / size, size))
     }
 
+    /** 내가 연관된(개설 또는 참가) 정산 히스토리 — 전체 상태(OPEN/SETTLED/CANCELLED), 최신순. */
+    fun history(userId: Long, limit: Int, offset: Int): List<SplitBill> {
+        val size = limit.coerceAtLeast(1)
+        return billRepository.findHistoryForUser(userId, PageRequest.of(offset / size, size))
+    }
+
     fun pendingRequests(userId: Long, limit: Int, offset: Int): List<SplitParticipant> {
         val size = limit.coerceAtLeast(1)
         return participantRepository.findPendingForOpenBills(

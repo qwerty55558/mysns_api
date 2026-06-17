@@ -14,6 +14,14 @@ interface SplitBillRepository : JpaRepository<SplitBill, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM SplitBill b WHERE b.id = :id")
     fun findByIdForUpdate(@Param("id") id: Long): SplitBill?
+
+    /** 내가 연관된(개설 또는 참가) 모든 정산을 최신순으로 — 개설자도 참가자 행으로 저장되므로 한 조건으로 커버. */
+    @Query(
+        "select b from SplitBill b " +
+            "where exists (select 1 from SplitParticipant p where p.splitBillId = b.id and p.userId = :userId) " +
+            "order by b.createdAt desc",
+    )
+    fun findHistoryForUser(@Param("userId") userId: Long, pageable: Pageable): List<SplitBill>
 }
 
 interface SplitParticipantRepository : JpaRepository<SplitParticipant, Long> {

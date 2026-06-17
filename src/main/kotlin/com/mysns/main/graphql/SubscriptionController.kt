@@ -4,6 +4,8 @@ import com.mysns.main.auth.currentUser
 import com.mysns.main.auth.requireCurrentUser
 import com.mysns.main.graphql.data.Subscription
 import com.mysns.main.graphql.data.SubscriptionStore
+import com.mysns.main.graphql.data.NameEmphasis
+import com.mysns.main.graphql.data.NameFont
 import com.mysns.main.graphql.data.ThemePreset
 import com.mysns.main.graphql.model.SubscribeInput
 import com.mysns.main.graphql.model.User
@@ -29,13 +31,25 @@ class SubscriptionController(
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun subscribe(@Argument input: SubscribeInput): Subscription =
-        subscriptionStore.subscribe(requireCurrentUser().userId, input.plan, input.theme)
+        subscriptionStore.subscribe(requireCurrentUser().userId, input.plan, input.theme, input.emphasis, input.font)
 
     /** 구독 테마 변경. */
     @MutationMapping
     @PreAuthorize("isAuthenticated()")
     fun changeSubscriptionTheme(@Argument theme: ThemePreset): Subscription =
         subscriptionStore.changeTheme(requireCurrentUser().userId, theme)
+
+    /** 이름 강조효과 변경 (ACTIVE 구독자만). */
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun changeNameEmphasis(@Argument emphasis: NameEmphasis): Subscription =
+        subscriptionStore.changeNameEmphasis(requireCurrentUser().userId, emphasis)
+
+    /** 이름 폰트 변경 (ACTIVE 구독자만). */
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun changeNameFont(@Argument font: NameFont): Subscription =
+        subscriptionStore.changeNameFont(requireCurrentUser().userId, font)
 
     /** 구독 해지 (자동 갱신 비활성화, 기간말 만료). */
     @MutationMapping
@@ -55,6 +69,20 @@ class SubscriptionController(
     fun activeTheme(users: List<User>): Map<User, ThemePreset?> {
         val activeMap = subscriptionStore.activeByOwnerIds(users.map { it.id })
         return users.associateWith { activeMap[it.id]?.theme }
+    }
+
+    /** User.activeEmphasis — 배치 조회. ACTIVE 구독자만 강조효과 반환, 나머지는 null. */
+    @BatchMapping(typeName = "User", field = "activeEmphasis")
+    fun activeEmphasis(users: List<User>): Map<User, NameEmphasis?> {
+        val activeMap = subscriptionStore.activeByOwnerIds(users.map { it.id })
+        return users.associateWith { activeMap[it.id]?.nameEmphasis }
+    }
+
+    /** User.activeFont — 배치 조회. ACTIVE 구독자만 폰트 반환, 나머지는 null. */
+    @BatchMapping(typeName = "User", field = "activeFont")
+    fun activeFont(users: List<User>): Map<User, NameFont?> {
+        val activeMap = subscriptionStore.activeByOwnerIds(users.map { it.id })
+        return users.associateWith { activeMap[it.id]?.nameFont }
     }
 
     /**

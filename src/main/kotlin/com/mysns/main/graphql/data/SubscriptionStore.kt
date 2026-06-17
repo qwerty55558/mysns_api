@@ -38,7 +38,7 @@ class SubscriptionStore(
      * 결제는 WalletStore.charge 를 통해 지출가능 잔액에서 차감.
      */
     @Transactional
-    fun subscribe(ownerId: Long, plan: SubscriptionPlan, theme: ThemePreset): Subscription {
+    fun subscribe(ownerId: Long, plan: SubscriptionPlan, theme: ThemePreset, emphasis: NameEmphasis = NameEmphasis.NONE, font: NameFont = NameFont.DEFAULT): Subscription {
         val existing = subscriptionRepository.findByOwnerId(ownerId)
         require(existing == null || existing.status != SubscriptionStatus.ACTIVE) { "이미 구독 중입니다." }
 
@@ -55,6 +55,8 @@ class SubscriptionStore(
             existing.status = SubscriptionStatus.ACTIVE
             existing.plan = plan
             existing.theme = theme
+            existing.nameEmphasis = emphasis
+            existing.nameFont = font
             existing.price = planConfig.price
             existing.autoRenew = true
             existing.currentPeriodEnd = periodEnd
@@ -67,6 +69,8 @@ class SubscriptionStore(
                     ownerId = ownerId,
                     plan = plan,
                     theme = theme,
+                    nameEmphasis = emphasis,
+                    nameFont = font,
                     price = planConfig.price,
                     startedAt = now,
                     currentPeriodEnd = periodEnd,
@@ -83,6 +87,30 @@ class SubscriptionStore(
         val subscription = subscriptionRepository.findByOwnerId(ownerId)
         require(subscription != null && subscription.status == SubscriptionStatus.ACTIVE) { "활성 구독이 없습니다." }
         subscription.theme = theme
+        subscription.updatedAt = OffsetDateTime.now()
+        return subscriptionRepository.save(subscription)
+    }
+
+    /**
+     * 이름 강조효과 변경 (ACTIVE 구독자만).
+     */
+    @Transactional
+    fun changeNameEmphasis(ownerId: Long, emphasis: NameEmphasis): Subscription {
+        val subscription = subscriptionRepository.findByOwnerId(ownerId)
+        require(subscription != null && subscription.status == SubscriptionStatus.ACTIVE) { "활성 구독이 없습니다." }
+        subscription.nameEmphasis = emphasis
+        subscription.updatedAt = OffsetDateTime.now()
+        return subscriptionRepository.save(subscription)
+    }
+
+    /**
+     * 이름 폰트 변경 (ACTIVE 구독자만).
+     */
+    @Transactional
+    fun changeNameFont(ownerId: Long, font: NameFont): Subscription {
+        val subscription = subscriptionRepository.findByOwnerId(ownerId)
+        require(subscription != null && subscription.status == SubscriptionStatus.ACTIVE) { "활성 구독이 없습니다." }
+        subscription.nameFont = font
         subscription.updatedAt = OffsetDateTime.now()
         return subscriptionRepository.save(subscription)
     }

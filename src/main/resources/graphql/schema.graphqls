@@ -9,6 +9,22 @@ enum ThemePreset {
     ROSE
 }
 
+enum NameEmphasis {
+    NONE
+    GRADIENT
+    GLOW
+    NEON
+    SPARKLE
+}
+
+enum NameFont {
+    DEFAULT
+    UNBOUNDED
+    SYNE
+    BLACK_HAN_SANS
+    SPACE_GROTESK
+}
+
 enum SubscriptionStatus {
     ACTIVE
     CANCELLED
@@ -25,6 +41,8 @@ type Subscription {
     status: SubscriptionStatus!
     plan: SubscriptionPlan!
     theme: ThemePreset!
+    nameEmphasis: NameEmphasis!
+    nameFont: NameFont!
     price: Int!
     autoRenew: Boolean!
     startedAt: DateTime!
@@ -101,6 +119,8 @@ type Query {
     splitBill(id: ID!): SplitBill
     # 내가 개설한 정산 목록 (최신순).
     mySplitBills(limit: Int! = 20, offset: Int! = 0): [SplitBill!]!
+    # 내가 연관된(개설/참가) 정산 히스토리 — 전체 상태, 최신순. 최근 일주일은 첫 페이지, 더보기는 offset 증가.
+    settlementHistory(limit: Int! = 20, offset: Int! = 0): [SplitBill!]!
     # 내가 응답 대기 중인 정산 요청 (최신순).
     pendingSplitRequests(limit: Int! = 20, offset: Int! = 0): [SplitParticipant!]!
 
@@ -188,6 +208,10 @@ type Mutation {
     subscribe(input: SubscribeInput!): Subscription!
     # 구독 테마 변경 (ACTIVE 구독자만).
     changeSubscriptionTheme(theme: ThemePreset!): Subscription!
+    # 이름 강조효과 변경 (ACTIVE 구독자만).
+    changeNameEmphasis(emphasis: NameEmphasis!): Subscription!
+    # 이름 폰트 변경 (ACTIVE 구독자만).
+    changeNameFont(font: NameFont!): Subscription!
     # 구독 해지 (자동 갱신 비활성화 — 기간 만료 시 EXPIRED 전환).
     cancelSubscription: Subscription!
 }
@@ -302,6 +326,10 @@ type User {
     isSubscriber: Boolean!
     # 현재 활성 테마 (구독자 아니면 null).
     activeTheme: ThemePreset
+    # 현재 활성 이름 강조효과 (구독자 아니면 null).
+    activeEmphasis: NameEmphasis
+    # 현재 활성 이름 폰트 (구독자 아니면 null).
+    activeFont: NameFont
     # 구독 상세 정보 (본인만, 타인 조회 시 null).
     subscription: Subscription
 }
@@ -411,6 +439,8 @@ input UpdatePostInput {
 input SubscribeInput {
     plan: SubscriptionPlan!
     theme: ThemePreset!
+    emphasis: NameEmphasis = NONE
+    font: NameFont = DEFAULT
     autoRenew: Boolean = true
 }
 
