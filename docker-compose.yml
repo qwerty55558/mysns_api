@@ -1,4 +1,54 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: mysns-postgres
+    environment:
+      POSTGRES_DB: mysns
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d mysns"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mysns-api:latest
+    container_name: mysns-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mysns
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      # 운영 기본값: 스키마 보존(update) + dev-mode off. 미설정 시 compose 기본 적용.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      MYSNS_SECURITY_DEVMODE: ${MYSNS_SECURITY_DEVMODE:-false}
+      MYSNS_JWT_SECRET: ${MYSNS_JWT_SECRET:?MYSNS_JWT_SECRET 를 .env 에 설정하세요 (256bit 이상)}
+      MYSNS_CORS_ALLOWEDORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:+UseContainerSupport}
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
   victoriametrics:
     image: victoriametrics/victoria-metrics:v1.106.1
     container_name: mysns-vm
@@ -51,6 +101,8 @@ services:
     restart: unless-stopped
 
 volumes:
+  pgdata:
+  uploads:
   vm-data:
   loki-data:
   grafana-data:

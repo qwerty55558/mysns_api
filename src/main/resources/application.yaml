@@ -1,6 +1,6 @@
 mysns:
   security:
-    dev-mode: true
+    dev-mode: ${MYSNS_SECURITY_DEVMODE:true}
   jwt:
     secret: dev-only-secret-please-replace-in-production-must-be-at-least-256-bits-long-padding
     access-ttl: 15m
@@ -44,7 +44,7 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create-drop}
     properties:
       hibernate:
         format_sql: true

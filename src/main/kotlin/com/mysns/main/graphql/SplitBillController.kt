@@ -33,6 +33,11 @@ class SplitBillController(
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
+    fun settlementHistory(@Argument limit: Int, @Argument offset: Int): List<SplitBill> =
+        splitBillStore.history(requireCurrentUser().userId, limit, offset)
+
+    @QueryMapping
+    @PreAuthorize("isAuthenticated()")
     fun pendingSplitRequests(@Argument limit: Int, @Argument offset: Int): List<SplitParticipant> =
         splitBillStore.pendingRequests(requireCurrentUser().userId, limit, offset)
 

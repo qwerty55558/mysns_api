@@ -1,0 +1,28 @@
+# 빌드 산출물/캐시
+build/
+.gradle/
+**/build/
+**/.gradle/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# VCS
+.git/
+.gitignore
+
+# 로컬 환경/업로드/시크릿
+.env
+.env.*
+!.env.example
+uploads/
+*.log
+
+# 컨테이너 정의 자체는 컨텍스트에 불필요
+Dockerfile
+.dockerignore
+docker-compose.yml
+README*.md
