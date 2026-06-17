@@ -1,0 +1,50 @@
+name: Publish BE image to GHCR
+
+# develop 에 푸시될 때마다 amd64 이미지를 빌드해 GHCR(latest)로 푸시.
+# 배포 서버는 docker compose pull api && up -d 만 하면 됨.
+on:
+  push:
+    branches: [develop]
+    paths:
+      - "src/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - "gradlew"
+      - "Dockerfile"
+      - ".github/workflows/docker-publish.yml"
+  workflow_dispatch: {}   # 수동 실행도 허용
+
+concurrency:
+  group: ghcr-publish-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest   # amd64 러너 → linux/amd64 네이티브 빌드
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/mysns-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
