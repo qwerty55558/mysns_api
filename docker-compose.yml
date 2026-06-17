@@ -15,7 +15,7 @@ services:
       retries: 5
     restart: unless-stopped
 
-  app:
+  api:
     build:
       context: .
       dockerfile: Dockerfile
@@ -24,6 +24,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      # default: postgres 통신용 내부망 / payflow-net: nginx·FE 와 공유(컨테이너명 api 로 접근)
+      - default
+      - payflow-net
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/mysns
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
@@ -35,8 +39,9 @@ services:
       MYSNS_CORS_ALLOWEDORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       JAVA_OPTS: ${JAVA_OPTS:--XX:MaxRAMPercentage=75 -XX:+UseSerialGC -XX:+UseContainerSupport}
-    ports:
-      - "${APP_PORT:-8080}:8080"
+    # 호스트 포트 미개방 — nginx 가 payflow-net 내부에서 api:8080 으로 프록시.
+    expose:
+      - "8080"
     volumes:
       - uploads:/app/uploads
     healthcheck:
@@ -99,6 +104,12 @@ services:
       - victoriametrics
       - loki
     restart: unless-stopped
+
+networks:
+  # nginx·FE·BE 공용 외부 네트워크. 사전에 한 번만 생성:
+  #   docker network create payflow-net
+  payflow-net:
+    external: true
 
 volumes:
   pgdata:
