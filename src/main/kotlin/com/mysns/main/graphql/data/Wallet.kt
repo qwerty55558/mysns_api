@@ -63,7 +63,7 @@ class WalletTransaction(
     val ownerId: Long,
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false, length = 32)
     val type: WalletTransactionType,
 
     /** 항상 양수. 방향은 type으로 구분. */
