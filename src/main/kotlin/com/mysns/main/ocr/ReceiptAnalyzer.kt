@@ -16,14 +16,23 @@ class ReceiptAnalyzer(
 ) {
     private val log = LoggerFactory.getLogger(ReceiptAnalyzer::class.java)
 
-    fun analyze(imageUrl: String): ReceiptAnalysis {
+    fun analyze(imageUrls: List<String>): ReceiptAnalysis {
         if (!ocrProps.enabled) {
             throw ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "OCR 기능이 비활성화되어 있습니다")
         }
+        if (imageUrls.isEmpty()) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "분석할 이미지가 없습니다")
+        }
+        if (imageUrls.size > 5) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "영수증 이미지는 최대 5장까지 분석합니다")
+        }
 
-        val path = resolveUploadPath(imageUrl)
-        val contentType = inferContentType(path.fileName.toString())
-        val result = ocrEngine.analyze(path, contentType)
+        val images = imageUrls.map { url ->
+            val path = resolveUploadPath(url)
+            OcrImage(path = path, contentType = inferContentType(path.fileName.toString()))
+        }
+
+        val result = ocrEngine.analyze(images)
 
         val trustworthy = result.confidence >= ocrProps.confidenceThreshold
         if (!trustworthy) {
