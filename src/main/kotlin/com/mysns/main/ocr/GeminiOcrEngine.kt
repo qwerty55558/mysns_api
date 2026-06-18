@@ -10,7 +10,6 @@ import org.springframework.web.client.RestClientException
 import org.springframework.web.client.body
 import tools.jackson.databind.ObjectMapper
 import java.nio.file.Files
-import java.nio.file.Path
 import java.time.Duration
 import java.util.Base64
 
@@ -33,21 +32,22 @@ class GeminiOcrEngine(
         })
         .build()
 
-    override fun analyze(image: Path, contentType: String): OcrResult {
+    override fun analyze(images: List<OcrImage>): OcrResult {
         if (apiKey.isBlank()) {
             log.warn("GEMINI_API_KEY 미설정 — OCR 빈 결과 반환 (FE에서 수동입력 유도)")
             return OcrResult.EMPTY
         }
+        if (images.isEmpty()) return OcrResult.EMPTY
 
-        val base64 = Base64.getEncoder().encodeToString(Files.readAllBytes(image))
+        val imageParts = images.map { img ->
+            val base64 = Base64.getEncoder().encodeToString(Files.readAllBytes(img.path))
+            mapOf("inline_data" to mapOf("mime_type" to img.contentType, "data" to base64))
+        }
+        val parts = imageParts + mapOf("text" to PROMPT)
+
         val body = mapOf(
             "contents" to listOf(
-                mapOf(
-                    "parts" to listOf(
-                        mapOf("inline_data" to mapOf("mime_type" to contentType, "data" to base64)),
-                        mapOf("text" to PROMPT),
-                    ),
-                ),
+                mapOf("parts" to parts),
             ),
             "generationConfig" to mapOf(
                 "response_mime_type" to "application/json",
@@ -119,14 +119,14 @@ class GeminiOcrEngine(
 
     companion object {
         private const val PROMPT = """
-이 한국어 영수증 이미지를 분석해서 다음을 JSON으로 반환해.
+다음은 사용자가 영수증으로 지정한 이미지(들)이다. 여러 장일 수 있다 — 한 영수증의 여러 페이지일 수도, 서로 다른 영수증일 수도 있다. 이를 종합 분석해라.
 
-- amount: 최종 결제 금액 (정수, 원 단위). 콤마/공백 없이. 못 찾으면 null.
-- item: 지출 항목을 한 줄로 요약 (예: "이마트 식료품", "스타벅스 아메리카노 2잔"). 가맹점 + 핵심 품목.
-- tag: 다음 중 하나의 카테고리 — 식비, 카페, 교통, 쇼핑, 의료, 문화, 생활, 통신, 기타
-- placeName: 영수증에 표시된 매장/가맹점 이름 (예: "이마트 일산점", "스타벅스 강남점")
-- rawText: OCR 된 영수증 전체 텍스트 (줄바꿈 유지)
-- confidence: 위 항목들에 대한 전체 추출 신뢰도 0.0 ~ 1.0
+- amount: 전체 결제 총액(정수, 원). 여러 페이지로 나뉜 한 영수증이면 중복 합산하지 말고 최종 결제액 1개. 서로 다른 영수증이면 각 최종액의 합. 못 찾으면 null.
+- item: 전체 지출을 한 줄로 요약(가맹점 + 핵심 품목).
+- tag: 식비/카페/교통/쇼핑/의료/문화/생활/통신/기타 중 하나.
+- placeName: 대표 매장/가맹점 이름.
+- rawText: 모든 이미지의 OCR 텍스트를 이미지 순서대로 이어붙임(줄바꿈 유지).
+- confidence: 전체 추출 신뢰도 0.0~1.0.
 
 영수증이 아니거나 판독 불가하면 모든 필드 null/빈문자열, confidence 0.0.
 """

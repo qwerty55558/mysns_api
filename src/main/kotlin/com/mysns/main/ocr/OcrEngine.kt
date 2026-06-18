@@ -2,8 +2,10 @@ package com.mysns.main.ocr
 
 import java.nio.file.Path
 
+data class OcrImage(val path: Path, val contentType: String)
+
 interface OcrEngine {
-    fun analyze(image: Path, contentType: String): OcrResult
+    fun analyze(images: List<OcrImage>): OcrResult
 }
 
 data class OcrResult(

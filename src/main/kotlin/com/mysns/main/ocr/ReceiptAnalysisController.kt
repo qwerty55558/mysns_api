@@ -10,6 +10,6 @@ class ReceiptAnalysisController(private val analyzer: ReceiptAnalyzer) {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    fun analyzeReceipt(@Argument imageUrl: String): ReceiptAnalysis =
-        analyzer.analyze(imageUrl)
+    fun analyzeReceipt(@Argument imageUrls: List<String>): ReceiptAnalysis =
+        analyzer.analyze(imageUrls)
 }
