@@ -27,14 +27,14 @@ class PostStore(
     fun findByAuthor(authorId: Long, limit: Int, offset: Int): List<Post> =
         postRepository.findByAuthorIdOrderByCreatedAtDesc(authorId, slice(limit, offset))
 
-    fun feed(limit: Int, offset: Int): List<Post> =
-        postRepository.findAllByOrderByCreatedAtDesc(slice(limit, offset))
+    fun feed(viewerId: Long?, limit: Int, offset: Int): List<Post> =
+        postRepository.findVisibleFeed(viewerId ?: -1L, slice(limit, offset))
 
-    fun search(query: String, limit: Int, offset: Int): List<Post> {
+    fun search(query: String, viewerId: Long?, limit: Int, offset: Int): List<Post> {
         // 해시태그 검색도 동일 경로 — 선행 '#'는 무시하고 content/tag/item에서 부분일치.
         val q = query.trim().removePrefix("#").trim()
         if (q.isEmpty()) return emptyList()
-        return postRepository.search(q, slice(limit, offset))
+        return postRepository.searchVisible(q, viewerId ?: -1L, slice(limit, offset))
     }
 
     @Transactional
