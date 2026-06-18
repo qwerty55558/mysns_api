@@ -76,7 +76,8 @@ class UserDeletionService(
         userRepository.deleteById(userId)
 
         // ── 5. 파일 삭제 ──────────────────────────────────────────────────────
-        // Avatar 파일 전용 삭제 헬퍼가 없으므로 avatar 파일은 스킵.
+
+        uploadCommitter.deleteUserAvatars(userId)
 
         for (postId in postIds) {
             uploadCommitter.deletePostDir(postId)

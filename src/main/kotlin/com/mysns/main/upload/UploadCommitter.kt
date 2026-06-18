@@ -87,4 +87,48 @@ class UploadCommitter(private val props: UploadProperties) {
         }
         log.info("deleted post dir — postId={}", postId)
     }
+
+    /**
+     * 아바타 URL을 temp에서 avatars/{userId}/로 커밋한다.
+     * - 이미 avatars/{userId}/ 또는 seed/ 경로면 idempotent하게 그대로 반환.
+     * - 그 외에는 반드시 본인 temp URL이어야 한다.
+     */
+    fun commitAvatar(value: String, userId: Long): String {
+        val pub = props.publicPrefix.trimEnd('/')
+        // idempotent: 이미 커밋된 avatars 경로이거나 seed 경로면 그대로 반환
+        if (value.startsWith("$pub/avatars/$userId/") || value.startsWith("$pub/seed/")) {
+            return value
+        }
+        val tempPrefix = "$pub/temp/$userId/"
+        if (!value.startsWith(tempPrefix)) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "본인이 업로드한 임시 이미지만 사용할 수 있습니다")
+        }
+        val filename = value.removePrefix(tempPrefix)
+        if (filename.isEmpty() || filename.contains('/') || filename.contains('\\') || filename.contains("..")) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "잘못된 이미지 경로입니다")
+        }
+        val baseDir = Path.of(props.dir).toAbsolutePath().normalize()
+        val src = baseDir.resolve("temp").resolve(userId.toString()).resolve(filename).normalize()
+        if (!src.startsWith(baseDir) || !Files.exists(src)) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND, "업로드된 이미지를 찾을 수 없습니다")
+        }
+        val avatarDir = baseDir.resolve("avatars").resolve(userId.toString())
+        Files.createDirectories(avatarDir)
+        val dst = avatarDir.resolve(filename)
+        Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        return "$pub/avatars/$userId/$filename"
+    }
+
+    /**
+     * 회원 탈퇴 시 avatars/{userId}/ 디렉터리를 재귀 삭제한다.
+     */
+    fun deleteUserAvatars(userId: Long) {
+        val baseDir = Path.of(props.dir).toAbsolutePath().normalize()
+        val avatarDir = baseDir.resolve("avatars").resolve(userId.toString()).normalize()
+        if (!avatarDir.startsWith(baseDir) || !Files.exists(avatarDir)) return
+        Files.walk(avatarDir).use { stream ->
+            stream.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
+        }
+        log.info("deleted avatar dir — userId={}", userId)
+    }
 }

@@ -12,6 +12,7 @@ import com.mysns.main.graphql.data.UserStore
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.UpdateMeInput
 import com.mysns.main.graphql.model.User
+import com.mysns.main.upload.UploadCommitter
 import org.springframework.graphql.data.method.annotation.Argument
 import org.springframework.graphql.data.method.annotation.BatchMapping
 import org.springframework.graphql.data.method.annotation.MutationMapping
@@ -29,6 +30,7 @@ class UserController(
     private val followStore: FollowStore,
     private val followRequestStore: FollowRequestStore,
     private val userDeletionService: UserDeletionService,
+    private val uploadCommitter: UploadCommitter,
 ) {
 
     @QueryMapping
@@ -158,12 +160,18 @@ class UserController(
     @PreAuthorize("isAuthenticated()")
     fun updateMe(@Argument input: UpdateMeInput): User {
         val current = requireCurrentUser()
+        val trimmedAvatar = input.avatarUrl?.trim()
+        val committedAvatar = when {
+            trimmedAvatar == null -> null                      // no change
+            trimmedAvatar.isEmpty() -> ""                      // clear avatar
+            else -> uploadCommitter.commitAvatar(trimmedAvatar, current.userId)
+        }
         return userStore.update(
             userId = current.userId,
             displayName = input.displayName?.trim()?.takeIf { it.isNotEmpty() },
             bio = input.bio,
             privateAccount = input.privateAccount,
-            avatarUrl = input.avatarUrl?.trim(),
+            avatarUrl = committedAvatar,
         )
     }
 
