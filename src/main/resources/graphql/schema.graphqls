@@ -175,6 +175,8 @@ type Mutation {
 
     # Profile
     updateMe(input: UpdateMeInput!): User!
+    # 회원 탈퇴 (잔액·진행 중 정산이 없을 때만 허용). 성공 시 true.
+    deleteMe: Boolean!
 
     # Notifications
     markNotificationRead(id: ID!): Boolean!

@@ -33,4 +33,26 @@ interface CommentRepository : JpaRepository<Comment, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Comment c SET c.likeCount = c.likeCount - 1 WHERE c.id = :id AND c.likeCount > 0")
     fun decrementLikeCount(@Param("id") id: Long): Int
+
+    /**
+     * 탈퇴 보정: uid가 작성한 댓글이 달린 포스트들의 commentCount를 작성 댓글 수만큼 차감.
+     * GROUP BY로 포스트별 댓글 수를 구한 뒤 각각 감산. 0 이하 방지를 위해 GREATEST 사용.
+     * H2(MODE=PostgreSQL)와 PostgreSQL 모두에서 동작하는 native SQL.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query(
+        value = """
+            UPDATE posts
+            SET comment_count = GREATEST(0, comment_count - c.cnt)
+            FROM (
+                SELECT post_id, COUNT(*) AS cnt
+                FROM comments
+                WHERE author_id = :uid
+                GROUP BY post_id
+            ) c
+            WHERE posts.id = c.post_id
+        """,
+        nativeQuery = true,
+    )
+    fun decrementCommentCountForPostsByAuthor(@Param("uid") uid: Long): Int
 }

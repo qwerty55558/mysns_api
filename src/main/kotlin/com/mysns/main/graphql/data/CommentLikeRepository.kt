@@ -38,4 +38,15 @@ interface CommentLikeRepository : JpaRepository<CommentLike, CommentLikeId> {
 
     fun existsByUserIdAndCommentId(userId: Long, commentId: Long): Boolean
     fun findByUserIdAndCommentIdIn(userId: Long, commentIds: Collection<Long>): List<CommentLike>
+
+    /**
+     * 탈퇴 보정: uid가 좋아요한 댓글들의 likeCount -1.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        "UPDATE Comment c SET c.likeCount = c.likeCount - 1 " +
+            "WHERE c.id IN (SELECT cl.commentId FROM CommentLike cl WHERE cl.userId = :uid) " +
+            "AND c.likeCount > 0",
+    )
+    fun decrementLikeCountForCommentsLikedByUser(@Param("uid") uid: Long): Int
 }

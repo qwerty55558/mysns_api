@@ -7,6 +7,7 @@ import com.mysns.main.graphql.data.FollowRequest
 import com.mysns.main.graphql.data.FollowRequestStore
 import com.mysns.main.graphql.data.FollowStore
 import com.mysns.main.graphql.data.PostStore
+import com.mysns.main.graphql.data.UserDeletionService
 import com.mysns.main.graphql.data.UserStore
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.UpdateMeInput
@@ -27,6 +28,7 @@ class UserController(
     private val bookmarkStore: BookmarkStore,
     private val followStore: FollowStore,
     private val followRequestStore: FollowRequestStore,
+    private val userDeletionService: UserDeletionService,
 ) {
 
     @QueryMapping
@@ -143,6 +145,13 @@ class UserController(
         }
         followRequestStore.delete(request)
         return true
+    }
+
+    @MutationMapping
+    @PreAuthorize("isAuthenticated()")
+    fun deleteMe(): Boolean {
+        val current = requireCurrentUser()
+        return userDeletionService.deleteMe(current.userId)
     }
 
     @MutationMapping

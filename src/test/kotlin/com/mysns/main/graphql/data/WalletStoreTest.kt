@@ -74,21 +74,23 @@ class WalletStoreTest @Autowired constructor(
     @Test
     fun `hold 는 balance 를 held 로 묶고 잔액부족이면 실패한다`() {
         val u = newUser("u")
+        val counterparty = newUser("counterparty-hold")
         walletStore.getOrCreate(u)
-        walletStore.hold(u, 30_000, counterpartyId = 999, memo = "예치")
+        walletStore.hold(u, 30_000, counterpartyId = counterparty, memo = "예치")
         assertEquals(WalletStore.INITIAL_BALANCE - 30_000, balanceOf(u))
         assertEquals(30_000, heldOf(u))
         assertThrows(IllegalArgumentException::class.java) {
-            walletStore.hold(u, WalletStore.INITIAL_BALANCE, 999, null)
+            walletStore.hold(u, WalletStore.INITIAL_BALANCE, counterparty, null)
         }
     }
 
     @Test
     fun `release 는 held 를 balance 로 되돌린다`() {
         val u = newUser("u")
+        val counterparty = newUser("counterparty-release")
         walletStore.getOrCreate(u)
-        walletStore.hold(u, 30_000, 999, null)
-        walletStore.release(u, 30_000, 999, "환불")
+        walletStore.hold(u, 30_000, counterparty, null)
+        walletStore.release(u, 30_000, counterparty, "환불")
         assertEquals(WalletStore.INITIAL_BALANCE, balanceOf(u))
         assertEquals(0, heldOf(u))
     }

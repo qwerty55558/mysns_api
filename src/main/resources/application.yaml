@@ -53,6 +53,10 @@ spring:
         generate_statistics: true
     open-in-view: false
     show-sql: false
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
   graphql:
     graphiql:
       enabled: true

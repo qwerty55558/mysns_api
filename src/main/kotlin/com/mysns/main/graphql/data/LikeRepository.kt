@@ -34,4 +34,15 @@ interface LikeRepository : JpaRepository<Like, LikeId> {
     fun countByPostId(postId: Long): Long
     fun findByPostIdOrderByCreatedAtDesc(postId: Long, pageable: Pageable): List<Like>
     fun findByUserIdAndPostIdIn(userId: Long, postIds: Collection<Long>): List<Like>
+
+    /**
+     * 탈퇴 보정: uid가 좋아요한 포스트들의 likeCount -1.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        "UPDATE Post p SET p.likeCount = p.likeCount - 1 " +
+            "WHERE p.id IN (SELECT l.postId FROM Like l WHERE l.userId = :uid) " +
+            "AND p.likeCount > 0",
+    )
+    fun decrementLikeCountForPostsLikedByUser(@Param("uid") uid: Long): Int
 }

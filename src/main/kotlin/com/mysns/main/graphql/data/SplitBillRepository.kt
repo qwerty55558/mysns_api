@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param
 interface SplitBillRepository : JpaRepository<SplitBill, Long> {
     fun findByCreatorIdOrderByCreatedAtDesc(creatorId: Long, pageable: Pageable): List<SplitBill>
 
+    fun existsByCreatorIdAndStatusNotIn(creatorId: Long, statuses: Collection<SplitBillStatus>): Boolean
+
     /** 정산 응답(수락/거절/취소)을 같은 bill에 대해 직렬화하기 위한 비관적 쓰기 잠금 조회. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM SplitBill b WHERE b.id = :id")
@@ -26,6 +28,8 @@ interface SplitBillRepository : JpaRepository<SplitBill, Long> {
 
 interface SplitParticipantRepository : JpaRepository<SplitParticipant, Long> {
     fun findBySplitBillId(splitBillId: Long): List<SplitParticipant>
+
+    fun existsByUserIdAndStatusAndIsCreatorFalse(userId: Long, status: SplitParticipantStatus): Boolean
 
     fun findBySplitBillIdAndUserId(splitBillId: Long, userId: Long): SplitParticipant?
 

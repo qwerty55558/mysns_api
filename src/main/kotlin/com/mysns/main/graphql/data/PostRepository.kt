@@ -44,4 +44,8 @@ interface PostRepository : JpaRepository<Post, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Post p SET p.shareCount = p.shareCount + 1 WHERE p.id = :id")
     fun incrementShareCount(@Param("id") id: Long): Int
+
+    /** 탈퇴 전 파일 삭제를 위해 author의 포스트 id 목록 수집. */
+    @Query("SELECT p.id FROM Post p WHERE p.authorId = :authorId")
+    fun findIdsByAuthorId(@Param("authorId") authorId: Long): List<Long>
 }
