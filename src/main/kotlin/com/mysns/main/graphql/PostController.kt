@@ -3,6 +3,7 @@ package com.mysns.main.graphql
 import com.mysns.main.auth.currentUser
 import com.mysns.main.auth.requireCurrentUser
 import com.mysns.main.graphql.data.BookmarkStore
+import com.mysns.main.graphql.data.FollowStore
 import com.mysns.main.graphql.data.LikeStore
 import com.mysns.main.graphql.data.PostStore
 import com.mysns.main.graphql.data.SubscriptionStatus
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Controller
 class PostController(
     private val postStore: PostStore,
     private val userStore: UserStore,
+    private val followStore: FollowStore,
     private val likeStore: LikeStore,
     private val bookmarkStore: BookmarkStore,
     private val commentStore: CommentStore,
@@ -38,18 +40,24 @@ class PostController(
 ) {
 
     @QueryMapping
-    fun post(@Argument id: String): Post? = postStore.findById(id.toLong())
+    fun post(@Argument id: String): Post? {
+        val post = postStore.findById(id.toLong()) ?: return null
+        val author = userStore.findById(post.authorId) ?: return null
+        if (!author.privateAccount) return post
+        val viewer = currentUser() ?: return null
+        return if (viewer.userId == author.id || followStore.isFollowing(viewer.userId, author.id)) post else null
+    }
 
     @QueryMapping
     fun feed(@Argument limit: Int, @Argument offset: Int): List<Post> =
-        postStore.feed(limit, offset)
+        postStore.feed(currentUser()?.userId, limit, offset)
 
     @QueryMapping
     fun searchPosts(
         @Argument query: String,
         @Argument limit: Int,
         @Argument offset: Int,
-    ): List<Post> = postStore.search(query, limit, offset)
+    ): List<Post> = postStore.search(query, currentUser()?.userId, limit, offset)
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
