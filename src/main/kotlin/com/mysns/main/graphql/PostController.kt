@@ -3,9 +3,14 @@ package com.mysns.main.graphql
 import com.mysns.main.auth.currentUser
 import com.mysns.main.auth.requireCurrentUser
 import com.mysns.main.graphql.data.BookmarkStore
+import com.mysns.main.graphql.data.CommentStore
+import com.mysns.main.graphql.data.Crowdfunding
+import com.mysns.main.graphql.data.CrowdfundingStatus
+import com.mysns.main.graphql.data.CrowdfundingStore
 import com.mysns.main.graphql.data.FollowStore
 import com.mysns.main.graphql.data.LikeStore
 import com.mysns.main.graphql.data.PostStore
+import com.mysns.main.graphql.data.PostType
 import com.mysns.main.graphql.data.SubscriptionStatus
 import com.mysns.main.graphql.data.SubscriptionStore
 import com.mysns.main.graphql.data.UserStore
@@ -14,7 +19,6 @@ import com.mysns.main.graphql.model.CreatePostInput
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.UpdatePostInput
 import com.mysns.main.graphql.model.User
-import com.mysns.main.graphql.data.CommentStore
 import com.mysns.main.upload.UploadCommitter
 import io.micrometer.core.instrument.MeterRegistry
 import org.springframework.graphql.data.method.annotation.Argument
@@ -37,6 +41,7 @@ class PostController(
     private val uploadCommitter: UploadCommitter,
     private val meterRegistry: MeterRegistry,
     private val subscriptionStore: SubscriptionStore,
+    private val crowdfundingStore: CrowdfundingStore,
 ) {
 
     @QueryMapping
@@ -78,6 +83,7 @@ class PostController(
                 "게시글 테마는 구독자만 설정할 수 있습니다."
             }
         }
+        val postType = input.type ?: PostType.REGULAR
         val draft = postStore.create(
             authorId = current.userId,
             content = input.content,
@@ -87,7 +93,17 @@ class PostController(
             amount = input.amount,
             place = input.place?.toEntity(),
             theme = input.theme,
+            type = postType,
         )
+        if (postType == PostType.CROWDFUNDING) {
+            require(input.crowdfunding != null) { "크라우드펀딩 정보가 필요합니다." }
+            crowdfundingStore.create(
+                creatorId = current.userId,
+                postId = draft.id,
+                goalAmount = input.crowdfunding.goalAmount,
+                deadline = input.crowdfunding.deadline,
+            )
+        }
         val committed = uploadCommitter.commit(input.imageUrls.orEmpty(), draft.id, current.userId)
         val finalPost = if (committed.isNotEmpty()) {
             postStore.setImageUrls(draft.id, committed) ?: draft
@@ -148,10 +164,17 @@ class PostController(
         if (post.authorId != current.userId) {
             throw AccessDeniedException("not the author of this post")
         }
+        val cf = crowdfundingStore.findByPostId(postId)
+        if (cf != null && cf.status == CrowdfundingStatus.OPEN && cf.currentAmount > 0) {
+            throw IllegalStateException("진행 중인 펀딩(예치된 후원)이 있어 삭제할 수 없습니다.")
+        }
         val deleted = postStore.delete(postId)
         if (deleted) uploadCommitter.deletePostDir(postId)
         return deleted
     }
+
+    @SchemaMapping(typeName = "Post", field = "crowdfunding")
+    fun crowdfunding(post: Post): Crowdfunding? = crowdfundingStore.findByPostId(post.id)
 
     @MutationMapping
     @PreAuthorize("isAuthenticated()")

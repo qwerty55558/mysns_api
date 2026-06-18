@@ -89,27 +89,45 @@ class WalletStore(
 
     /** 정산 예치 — 참가자의 지출가능 잔액을 묶는다(held). 잔액 부족이면 실패. */
     @Transactional
-    fun hold(ownerId: Long, amount: Int, counterpartyId: Long, memo: String?): WalletTransaction {
+    fun hold(
+        ownerId: Long,
+        amount: Int,
+        counterpartyId: Long,
+        memo: String?,
+        type: WalletTransactionType = WalletTransactionType.SPLIT_HOLD,
+    ): WalletTransaction {
         validateAmount(amount)
         getOrCreate(ownerId)
         require(walletRepository.hold(ownerId, amount, OffsetDateTime.now()) == 1) { "잔액이 부족합니다." }
         val wallet = walletRepository.findByOwnerId(ownerId)!!
-        return record(ownerId, WalletTransactionType.SPLIT_HOLD, amount, wallet.balance, counterpartyId, memo)
+        return record(ownerId, type, amount, wallet.balance, counterpartyId, memo)
     }
 
     /** 정산 환불 — 묶인 잔액을 지출가능 잔액으로 되돌린다. */
     @Transactional
-    fun release(ownerId: Long, amount: Int, counterpartyId: Long, memo: String?): WalletTransaction {
+    fun release(
+        ownerId: Long,
+        amount: Int,
+        counterpartyId: Long,
+        memo: String?,
+        type: WalletTransactionType = WalletTransactionType.SPLIT_REFUND,
+    ): WalletTransaction {
         require(amount > 0) { "환불 금액이 올바르지 않습니다." }
         getOrCreate(ownerId)
         require(walletRepository.release(ownerId, amount, OffsetDateTime.now()) == 1) { "환불할 예치 잔액이 없습니다." }
         val wallet = walletRepository.findByOwnerId(ownerId)!!
-        return record(ownerId, WalletTransactionType.SPLIT_REFUND, amount, wallet.balance, counterpartyId, memo)
+        return record(ownerId, type, amount, wallet.balance, counterpartyId, memo)
     }
 
     /** 정산 확정 지급 — 참가자의 묶인 잔액을 개설자(수금자)에게 한 트랜잭션에서 원자적으로 지급한다. */
     @Transactional
-    fun settleHeld(payerId: Long, payeeId: Long, amount: Int, memo: String?): WalletTransaction {
+    fun settleHeld(
+        payerId: Long,
+        payeeId: Long,
+        amount: Int,
+        memo: String?,
+        type: WalletTransactionType = WalletTransactionType.SPLIT_SETTLE_IN,
+    ): WalletTransaction {
         require(amount > 0) { "정산 금액이 올바르지 않습니다." }
         getOrCreate(payerId)
         getOrCreate(payeeId)
@@ -123,7 +141,7 @@ class WalletStore(
             require(walletRepository.settleHeld(payerId, amount, now) == 1) { "예치 잔액이 부족합니다." }
         }
         val payee = walletRepository.findByOwnerId(payeeId)!!
-        return record(payeeId, WalletTransactionType.SPLIT_SETTLE_IN, amount, payee.balance, payerId, memo)
+        return record(payeeId, type, amount, payee.balance, payerId, memo)
     }
 
     private fun record(

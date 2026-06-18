@@ -2,6 +2,7 @@ package com.mysns.main.graphql.data
 
 import com.mysns.main.graphql.model.Place
 import com.mysns.main.graphql.model.Post
+import com.mysns.main.graphql.data.PostType
 import com.mysns.main.graphql.data.ThemePreset
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Component
@@ -47,6 +48,7 @@ class PostStore(
         amount: Int?,
         place: Place?,
         theme: ThemePreset? = null,
+        type: PostType = PostType.REGULAR,
     ): Post {
         val saved = postRepository.save(
             Post(
@@ -59,6 +61,7 @@ class PostStore(
                 amount = amount,
                 place = place,
                 theme = theme,
+                type = type,
             )
         )
         userRepository.incrementPostCount(authorId)

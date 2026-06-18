@@ -1,5 +1,6 @@
 package com.mysns.main.graphql.model
 
+import com.mysns.main.graphql.data.PostType
 import com.mysns.main.graphql.data.ThemePreset
 import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
@@ -79,4 +80,9 @@ class Post(
     @Enumerated(EnumType.STRING)
     @Column(length = 16)
     var theme: ThemePreset? = null,
+
+    /** 게시물 종류. 기본값 REGULAR. */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 16, nullable = false)
+    var type: PostType = PostType.REGULAR,
 )
