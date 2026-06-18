@@ -2,11 +2,11 @@ mysns:
   security:
     dev-mode: ${MYSNS_SECURITY_DEVMODE:true}
   jwt:
-    secret: dev-only-secret-please-replace-in-production-must-be-at-least-256-bits-long-padding
+    secret: ${MYSNS_JWT_SECRET:dev-only-secret-please-replace-in-production-must-be-at-least-256-bits-long-padding}
     access-ttl: 15m
     refresh-ttl: 30d
   cors:
-    allowed-origins: http://localhost:3000
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   upload:
     dir: ./uploads
     public-prefix: /uploads

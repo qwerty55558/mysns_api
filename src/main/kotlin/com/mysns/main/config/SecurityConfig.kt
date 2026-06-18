@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.http.HttpMethod
 import org.springframework.security.authorization.AuthorizationDecision
 import org.springframework.security.authorization.AuthorizationManager
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity
@@ -53,10 +54,10 @@ class SecurityConfig {
                 it.requestMatchers("/graphql", "/graphiql/**").permitAll()
                 it.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
                 it.requestMatchers("/upload").authenticated()
-                // 본인이 업로드한 temp 폴더만 접근 가능 (path 의 userId 와 현재 사용자 비교)
+                // 본인이 업로드한 temp 폴더만 접근 가능 (path 의 userId 와 현재 사용자 비교) — 아래 공개 GET 보다 먼저 매칭.
                 it.requestMatchers("/uploads/temp/**").access(tempOwnerAuth())
-                // commit 된 post 이미지는 인증된 사용자 누구나 (현 시점 모든 post 가 public)
-                it.requestMatchers("/uploads/posts/**").authenticated()
+                // post·seed·avatar 등 미디어 GET 은 공개 — <img>·next/image 옵티마이저는 Bearer 토큰을 못 싣는다.
+                it.requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                 it.anyRequest().authenticated()
             }
         }
