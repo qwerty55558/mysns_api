@@ -25,23 +25,23 @@ interface PostRepository : JpaRepository<Post, Long> {
     )
     fun search(@Param("q") q: String, pageable: Pageable): List<Post>
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Post p SET p.likeCount = p.likeCount + 1 WHERE p.id = :id")
     fun incrementLikeCount(@Param("id") id: Long): Int
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Post p SET p.likeCount = p.likeCount - 1 WHERE p.id = :id AND p.likeCount > 0")
     fun decrementLikeCount(@Param("id") id: Long): Int
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Post p SET p.commentCount = p.commentCount + 1 WHERE p.id = :id")
     fun incrementCommentCount(@Param("id") id: Long): Int
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Post p SET p.commentCount = p.commentCount - 1 WHERE p.id = :id AND p.commentCount > 0")
     fun decrementCommentCount(@Param("id") id: Long): Int
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Post p SET p.shareCount = p.shareCount + 1 WHERE p.id = :id")
     fun incrementShareCount(@Param("id") id: Long): Int
 }

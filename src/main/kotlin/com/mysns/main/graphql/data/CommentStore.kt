@@ -13,6 +13,7 @@ import java.time.OffsetDateTime
 class CommentStore(
     private val commentRepository: CommentRepository,
     private val commentLikeRepository: CommentLikeRepository,
+    private val notificationRepository: NotificationRepository,
     private val postRepository: PostRepository,
     private val events: ApplicationEventPublisher,
 ) {
@@ -68,6 +69,11 @@ class CommentStore(
     fun delete(id: Long): Boolean {
         val existing = commentRepository.findById(id).orElse(null) ?: return false
         commentLikeRepository.deleteAllForComment(id)
+        // 이 댓글을 가리키는 고아 알림 정리 (COMMENT / COMMENT_LIKE)
+        notificationRepository.deleteByTypesAndEntityIds(
+            listOf(NotificationType.COMMENT.name, NotificationType.COMMENT_LIKE.name),
+            listOf(id),
+        )
         commentRepository.delete(existing)
         postRepository.decrementCommentCount(existing.postId)
         return true

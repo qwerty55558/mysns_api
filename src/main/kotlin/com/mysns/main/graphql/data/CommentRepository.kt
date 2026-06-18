@@ -26,11 +26,11 @@ interface CommentRepository : JpaRepository<Comment, Long> {
     )
     fun findLatestByPostIdIn(@Param("postIds") postIds: Collection<Long>): List<Comment>
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Comment c SET c.likeCount = c.likeCount + 1 WHERE c.id = :id")
     fun incrementLikeCount(@Param("id") id: Long): Int
 
-    @Modifying(clearAutomatically = true)
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Comment c SET c.likeCount = c.likeCount - 1 WHERE c.id = :id AND c.likeCount > 0")
     fun decrementLikeCount(@Param("id") id: Long): Int
 }

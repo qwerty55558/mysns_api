@@ -17,6 +17,7 @@ class PostStore(
     private val bookmarkRepository: BookmarkRepository,
     private val commentRepository: CommentRepository,
     private val commentLikeRepository: CommentLikeRepository,
+    private val notificationRepository: NotificationRepository,
 ) {
     fun findById(id: Long): Post? = postRepository.findById(id).orElse(null)
 
@@ -100,10 +101,17 @@ class PostStore(
         val commentIds = commentRepository.findByPostId(id).map { it.id }
         if (commentIds.isNotEmpty()) {
             commentLikeRepository.deleteAllForComments(commentIds)
+            // 삭제되는 댓글들을 가리키는 고아 알림 정리
+            notificationRepository.deleteByTypesAndEntityIds(
+                listOf(NotificationType.COMMENT.name, NotificationType.COMMENT_LIKE.name),
+                commentIds,
+            )
         }
         commentRepository.deleteByPostId(id)
         likeRepository.deleteAllForPost(id)
         bookmarkRepository.deleteAllForPost(id)
+        // 이 게시글을 가리키는 POST_LIKE 고아 알림 정리
+        notificationRepository.deleteByTypesAndEntityIds(listOf(NotificationType.POST_LIKE.name), listOf(id))
         postRepository.delete(post)
         userRepository.decrementPostCount(post.authorId)
         return true

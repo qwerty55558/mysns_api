@@ -46,4 +46,14 @@ interface NotificationRepository : JpaRepository<Notification, Long> {
         nativeQuery = true,
     )
     fun markAllRead(@Param("recipientId") recipientId: Long): Int
+
+    @Modifying
+    @Query(
+        value = "DELETE FROM notifications WHERE type IN (:types) AND entity_id IN (:entityIds)",
+        nativeQuery = true,
+    )
+    fun deleteByTypesAndEntityIds(
+        @Param("types") types: Collection<String>,
+        @Param("entityIds") entityIds: Collection<Long>,
+    ): Int
 }
