@@ -28,6 +28,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && groupadd -r app && useradd -r -g app app
 
 COPY --from=build /workspace/app.jar app.jar
+# 시드 더미 이미지를 이미지에 베이킹. (제거 시 이 COPY 한 줄만 지우면 됨)
+# 주의: named volume 이 /app/uploads 를 가리면 '볼륨 최초 생성' 때만 복사된다.
+#       기존 배포서버는 volume 에 1회 주입 필요 — README/배포 노트 참고.
+COPY uploads/seed /app/uploads/seed
 RUN mkdir -p /app/uploads && chown -R app:app /app
 USER app
 

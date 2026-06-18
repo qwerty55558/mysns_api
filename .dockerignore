@@ -18,7 +18,10 @@ build/
 .env
 .env.*
 !.env.example
-uploads/
+# 유저 업로드는 제외하되, 시드 더미 이미지는 이미지에 베이킹하므로 재포함.
+# (uploads/ 가 아닌 uploads/* 로 자식만 제외해야 !uploads/seed 재포함이 먹힌다)
+uploads/*
+!uploads/seed
 *.log
 
 # 컨테이너 정의 자체는 컨텍스트에 불필요
