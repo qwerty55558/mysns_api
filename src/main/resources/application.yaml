@@ -26,6 +26,8 @@ mysns:
     monthly: { price: 3800, months: 1 }
     yearly:  { price: 38000, months: 12 }
     renew-cron: "0 0 * * * *"
+  crowdfunding:
+    deadline-cron: "0 0 * * * *"
 
 spring:
   config:

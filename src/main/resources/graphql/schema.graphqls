@@ -1,5 +1,23 @@
 scalar DateTime
 
+enum PostType {
+    REGULAR
+    CROWDFUNDING
+}
+
+enum CrowdfundingStatus {
+    OPEN
+    SUCCEEDED
+    FAILED
+}
+
+enum BackingStatus {
+    ACTIVE
+    CANCELLED
+    SETTLED
+    REFUNDED
+}
+
 enum ThemePreset {
     OCEAN
     SUNSET
@@ -127,6 +145,14 @@ type Query {
     # 구독 (프리미엄 멤버십)
     # 내 구독 정보 (구독 중이 아니면 null).
     mySubscription: Subscription
+
+    # 크라우드펀딩
+    # 크라우드펀딩 목록 (최신순).
+    crowdfundings(limit: Int! = 20, offset: Int! = 0): [Crowdfunding!]!
+    # 크라우드펀딩 단건.
+    crowdfunding(id: ID!): Crowdfunding
+    # 내가 개설하거나 후원한 크라우드펀딩 (최신순).
+    myCrowdfundings(limit: Int! = 20, offset: Int! = 0): [Crowdfunding!]!
 }
 
 type ReceiptAnalysis {
@@ -216,6 +242,20 @@ type Mutation {
     changeNameFont(font: NameFont!): Subscription!
     # 구독 해지 (자동 갱신 비활성화 — 기간 만료 시 EXPIRED 전환).
     cancelSubscription: Subscription!
+
+    # 크라우드펀딩
+    # 크라우드펀딩에 후원한다.
+    backCrowdfunding(crowdfundingId: ID!, amount: Int!): Crowdfunding!
+    # 후원을 취소한다 (OPEN & deadline 이전에만 가능).
+    cancelBacking(crowdfundingId: ID!): Crowdfunding!
+    # 개설자가 목표 금액 달성 후 직접 마감한다.
+    closeCrowdfunding(crowdfundingId: ID!): Crowdfunding!
+    # 체크리스트 항목 추가 (개설자만).
+    addChecklistItem(crowdfundingId: ID!, text: String!): ChecklistItem!
+    # 체크리스트 항목 완료 토글 (개설자만).
+    toggleChecklistItem(itemId: ID!): ChecklistItem!
+    # 체크리스트 항목 삭제 (개설자만).
+    removeChecklistItem(itemId: ID!): Boolean!
 }
 
 enum WalletTransactionType {
@@ -227,6 +267,9 @@ enum WalletTransactionType {
     SPLIT_REFUND
     SPLIT_SETTLE_IN
     SUBSCRIPTION_CHARGE
+    CROWDFUNDING_HOLD
+    CROWDFUNDING_REFUND
+    CROWDFUNDING_SETTLE_IN
 }
 
 type Wallet {
@@ -304,6 +347,42 @@ input SplitParticipantInput {
     percent: Int
 }
 
+type Crowdfunding {
+    id: ID!
+    post: Post!
+    creator: User!
+    goalAmount: Int!
+    currentAmount: Int!
+    backerCount: Int!
+    progressPercent: Int!
+    status: CrowdfundingStatus!
+    deadline: DateTime!
+    createdAt: DateTime!
+    settledAt: DateTime
+    canCloseEarly: Boolean!
+    viewerBacking: Backing
+    checklist: [ChecklistItem!]!
+}
+
+type Backing {
+    id: ID!
+    amount: Int!
+    status: BackingStatus!
+    createdAt: DateTime!
+}
+
+type ChecklistItem {
+    id: ID!
+    text: String!
+    done: Boolean!
+    position: Int!
+}
+
+input CrowdfundingInput {
+    goalAmount: Int!
+    deadline: DateTime!
+}
+
 type User {
     id: ID!
     username: String!
@@ -371,6 +450,10 @@ type Post {
     likedBy(limit: Int! = 20, offset: Int! = 0): [User!]!
     # 게시글 테마 (구독자 전용, null이면 기본 테마).
     theme: ThemePreset
+    # 게시물 종류.
+    type: PostType!
+    # 크라우드펀딩 정보 (CROWDFUNDING 게시물에만 존재).
+    crowdfunding: Crowdfunding
 }
 
 # 카카오 Local API 응답 (place_name, x, y, road_address_name, category_group_name, category_group_code, id)
@@ -422,6 +505,10 @@ input CreatePostInput {
     place: PlaceInput
     # 게시글 테마 (구독자 전용).
     theme: ThemePreset
+    # 게시물 종류 (생략 시 REGULAR).
+    type: PostType
+    # 크라우드펀딩 정보 (type=CROWDFUNDING 일 때 필수).
+    crowdfunding: CrowdfundingInput
 }
 
 input UpdatePostInput {

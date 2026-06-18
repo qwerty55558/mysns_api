@@ -1,9 +1,6 @@
 package com.mysns.main.graphql.data
 
 import com.mysns.main.upload.UploadCommitter
-import org.springframework.data.jpa.repository.Modifying
-import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
@@ -24,6 +21,8 @@ class UserDeletionService(
     private val commentRepository: CommentRepository,
     private val commentLikeRepository: CommentLikeRepository,
     private val uploadCommitter: UploadCommitter,
+    private val crowdfundingRepository: CrowdfundingRepository,
+    private val backingRepository: BackingRepository,
 ) {
 
     @Transactional
@@ -49,6 +48,15 @@ class UserDeletionService(
         val hasPendingParticipation = splitParticipantRepository
             .existsByUserIdAndStatusAndIsCreatorFalse(userId, SplitParticipantStatus.PENDING)
         require(!hasPendingParticipation) { "예치 중인 정산(N빵) 참가 건이 있어 탈퇴할 수 없습니다." }
+
+        // 내가 개설자인 OPEN 크라우드펀딩에 예치금이 있으면 탈퇴 차단
+        val hasOpenCrowdfunding = crowdfundingRepository
+            .existsByCreatorIdAndStatusAndCurrentAmountGreaterThan(userId, CrowdfundingStatus.OPEN, 0)
+        require(!hasOpenCrowdfunding) { "진행 중인 크라우드펀딩(예치된 후원)이 있어 탈퇴할 수 없습니다." }
+
+        // 내가 후원자로서 ACTIVE 상태(예치 중)인 후원이 있으면 탈퇴 차단
+        val hasActiveBacking = backingRepository.existsByUserIdAndStatus(userId, BackingStatus.ACTIVE)
+        require(!hasActiveBacking) { "예치 중인 크라우드펀딩 후원이 있어 탈퇴할 수 없습니다." }
 
         // ── 2. 카운터 보정 ────────────────────────────────────────────────────
 

@@ -115,3 +115,23 @@ ALTER TABLE notifications ADD CONSTRAINT fk_notifications_recipient FOREIGN KEY 
 -- notifications.actor_id → users(id)
 ALTER TABLE notifications DROP CONSTRAINT IF EXISTS fk_notifications_actor;
 ALTER TABLE notifications ADD CONSTRAINT fk_notifications_actor FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- crowdfundings.post_id → posts(id)
+ALTER TABLE crowdfundings DROP CONSTRAINT IF EXISTS fk_crowdfundings_post;
+ALTER TABLE crowdfundings ADD CONSTRAINT fk_crowdfundings_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE;
+
+-- crowdfundings.creator_id → users(id)
+ALTER TABLE crowdfundings DROP CONSTRAINT IF EXISTS fk_crowdfundings_creator;
+ALTER TABLE crowdfundings ADD CONSTRAINT fk_crowdfundings_creator FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- backings.crowdfunding_id → crowdfundings(id)
+ALTER TABLE backings DROP CONSTRAINT IF EXISTS fk_backings_crowdfunding;
+ALTER TABLE backings ADD CONSTRAINT fk_backings_crowdfunding FOREIGN KEY (crowdfunding_id) REFERENCES crowdfundings(id) ON DELETE CASCADE;
+
+-- backings.user_id → users(id)
+ALTER TABLE backings DROP CONSTRAINT IF EXISTS fk_backings_user;
+ALTER TABLE backings ADD CONSTRAINT fk_backings_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- crowdfunding_checklist_items.crowdfunding_id → crowdfundings(id)
+ALTER TABLE crowdfunding_checklist_items DROP CONSTRAINT IF EXISTS fk_checklist_items_crowdfunding;
+ALTER TABLE crowdfunding_checklist_items ADD CONSTRAINT fk_checklist_items_crowdfunding FOREIGN KEY (crowdfunding_id) REFERENCES crowdfundings(id) ON DELETE CASCADE;

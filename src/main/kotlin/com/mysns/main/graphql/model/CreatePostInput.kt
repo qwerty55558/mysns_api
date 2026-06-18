@@ -1,5 +1,6 @@
 package com.mysns.main.graphql.model
 
+import com.mysns.main.graphql.data.PostType
 import com.mysns.main.graphql.data.ThemePreset
 
 data class CreatePostInput(
@@ -10,4 +11,6 @@ data class CreatePostInput(
     val amount: Int? = null,
     val place: PlaceInput? = null,
     val theme: ThemePreset? = null,
+    val type: PostType? = null,
+    val crowdfunding: CrowdfundingInput? = null,
 )

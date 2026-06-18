@@ -17,7 +17,9 @@ enum class WalletTransactionType {
     // N빵 정산: 예치(잠금) / 환불(해제) / 정산 확정 수금.
     SPLIT_HOLD, SPLIT_REFUND, SPLIT_SETTLE_IN,
     // 구독 결제.
-    SUBSCRIPTION_CHARGE
+    SUBSCRIPTION_CHARGE,
+    // 크라우드펀딩: 후원 예치 / 환불 / 정산 수금.
+    CROWDFUNDING_HOLD, CROWDFUNDING_REFUND, CROWDFUNDING_SETTLE_IN
 }
 
 @Entity
