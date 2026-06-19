@@ -30,7 +30,7 @@ class JwtAuthFilter(private val jwtProvider: JwtProvider) : OncePerRequestFilter
                 val auth = UsernamePasswordAuthenticationToken(
                     principal,
                     null,
-                    listOf(SimpleGrantedAuthority("ROLE_USER")),
+                    authoritiesFor(parsed.role),
                 )
                 SecurityContextHolder.getContext().authentication = auth
                 filterChain.doFilter(request, response)
@@ -53,7 +53,7 @@ class JwtAuthFilter(private val jwtProvider: JwtProvider) : OncePerRequestFilter
                 val auth = UsernamePasswordAuthenticationToken(
                     principal,
                     null,
-                    listOf(SimpleGrantedAuthority("ROLE_USER")),
+                    authoritiesFor(parsed.role),
                 )
                 SecurityContextHolder.getContext().authentication = auth
             } catch (e: Exception) {
@@ -63,6 +63,12 @@ class JwtAuthFilter(private val jwtProvider: JwtProvider) : OncePerRequestFilter
 
         filterChain.doFilter(request, response)
     }
+
+    private fun authoritiesFor(role: String): List<SimpleGrantedAuthority> =
+        if (role == "ADMIN")
+            listOf(SimpleGrantedAuthority("ROLE_ADMIN"), SimpleGrantedAuthority("ROLE_USER"))
+        else
+            listOf(SimpleGrantedAuthority("ROLE_USER"))
 
     private fun writeUnauthorized(response: HttpServletResponse, message: String, code: String) {
         response.status = HttpServletResponse.SC_UNAUTHORIZED

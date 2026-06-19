@@ -2,6 +2,8 @@ package com.mysns.main.graphql.model
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -44,4 +46,8 @@ class User(
 
     @Column(name = "private_account", nullable = false)
     var privateAccount: Boolean = false,
+
+    @Column(nullable = false, length = 16)
+    @Enumerated(EnumType.STRING)
+    var role: UserRole = UserRole.USER,
 )
