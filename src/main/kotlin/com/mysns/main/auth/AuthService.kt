@@ -68,7 +68,7 @@ class AuthService(
     }
 
     private fun buildAuthPayload(user: User): AuthPayload {
-        val access = jwtProvider.issueAccess(user.id, user.username)
+        val access = jwtProvider.issueAccess(user.id, user.username, user.role.name)
         val refresh = jwtProvider.issueRefresh(user.id, user.username)
         return AuthPayload(
             accessToken = access.token,

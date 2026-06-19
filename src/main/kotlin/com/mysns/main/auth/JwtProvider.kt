@@ -16,12 +16,13 @@ class JwtProvider(private val props: JwtProperties) {
 
     private val key: SecretKey = Keys.hmacShaKeyFor(props.secret.toByteArray())
 
-    fun issueAccess(userId: Long, username: String): IssuedToken {
+    fun issueAccess(userId: Long, username: String, role: String): IssuedToken {
         val now = Instant.now()
         val expiresAt = now.plus(props.accessTtl)
         val token = Jwts.builder()
             .subject(userId.toString())
             .claim("username", username)
+            .claim("role", role)
             .claim("type", TYPE_ACCESS)
             .issuedAt(Date.from(now))
             .expiration(Date.from(expiresAt))
@@ -59,13 +60,16 @@ class JwtProvider(private val props: JwtProperties) {
         if (type != expectedType) {
             throw JwtException("토큰 타입 불일치: expected=$expectedType actual=$type")
         }
+        // 구버전 토큰(role 클레임 없음)은 USER로 간주 — 하위 호환
+        val role = claims["role", String::class.java] ?: "USER"
         return ParsedToken(
             userId = claims.subject.toLong(),
             username = claims["username", String::class.java],
+            role = role,
         )
     }
 
-    data class ParsedToken(val userId: Long, val username: String)
+    data class ParsedToken(val userId: Long, val username: String, val role: String = "USER")
     data class IssuedToken(val token: String, val expiresAt: OffsetDateTime)
 
     companion object {

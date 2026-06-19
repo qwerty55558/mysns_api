@@ -3,6 +3,7 @@ package com.mysns.main.graphql.data
 import com.mysns.main.graphql.model.Place
 import com.mysns.main.graphql.model.Post
 import com.mysns.main.graphql.model.User
+import com.mysns.main.graphql.model.UserRole
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
@@ -88,7 +89,17 @@ class DataInitializer(
                 passwordHash = hash,
             )
         )
-        return mapOf("alice" to alice, "bob" to bob, "charlie" to charlie)
+        val admin = userRepository.save(
+            User(
+                username = "admin",
+                displayName = "Admin",
+                bio = "site administrator",
+                createdAt = base,
+                passwordHash = hash,
+                role = UserRole.ADMIN,
+            )
+        )
+        return mapOf("alice" to alice, "bob" to bob, "charlie" to charlie, "admin" to admin)
     }
 
     private fun seedFollows(users: Map<String, User>) {

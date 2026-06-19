@@ -92,13 +92,36 @@ services:
     image: grafana/grafana:11.4.0
     container_name: mysns-grafana
     profiles: ["observability"]
-    ports:
-      - "3001:3000"
+    # 호스트 포트 미개방 — nginx 가 payflow-net 내부에서 mysns-grafana:3000 으로 프록시.
+    # 외부에 3001 을 열면 nginx 의 auth_request 게이트를 우회할 수 있으므로 절대 금지.
+    # 로컬 디버깅만 필요하면 루프백에 한정: "127.0.0.1:3001:3000".
+    networks:
+      # default: victoriametrics·loki 데이터소스 통신용 내부망 (기존 동작 유지 필수)
+      # payflow-net: nginx 가 컨테이너 이름(mysns-grafana)으로 프록시
+      default: {}
+      payflow-net:
+        aliases:
+          - mysns-grafana
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      # admin/admin 탈출 필수 — .env 의 GRAFANA_ADMIN_PASSWORD 주입.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD 를 .env 에 설정하세요}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_USERS_ALLOW_SIGN_UP: "false"
+      # 서브패스 배포 — 공개 URL 은 https://payflow.clauminirockpt.me/grafana/
+      GF_SERVER_ROOT_URL: "https://payflow.clauminirockpt.me/grafana/"
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      # auth.proxy 자동로그인 — nginx 가 인가한 X-WEBAUTH-USER 헤더를 신뢰해 이중 로그인 제거.
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: "X-WEBAUTH-USER"
+      GF_AUTH_PROXY_HEADER_PROPERTY: "username"
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      # grafana 가 보는 소스 IP = nginx 컨테이너(유동). grafana 포트를 외부에 안 열었으므로
+      # nginx 를 거치지 않으면 도달 자체가 불가 → 실질 위험 없음.
+      # 더 엄격히 하려면 grafana 를 고정 서브넷에 묶고 그 대역만 허용.
+      GF_AUTH_PROXY_WHITELIST: "0.0.0.0/0"
+      # auth.proxy 로 자동 생성되는 유저 기본 역할(대시보드 보려면 Viewer 이상).
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: "Editor"
       DISCORD_ALERT_WEBHOOK_URL: ${DISCORD_ALERT_WEBHOOK_URL:-}
     volumes:
       - grafana-data:/var/lib/grafana

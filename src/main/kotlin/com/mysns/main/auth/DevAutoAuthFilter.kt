@@ -1,6 +1,7 @@
 package com.mysns.main.auth
 
 import com.mysns.main.graphql.data.UserStore
+import com.mysns.main.graphql.model.UserRole
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -21,10 +22,14 @@ class DevAutoAuthFilter(private val userStore: UserStore) : OncePerRequestFilter
             val devUser = userStore.first()
             if (devUser != null) {
                 val principal = AuthenticatedUser(devUser.id, devUser.username)
+                val authorities = if (devUser.role == UserRole.ADMIN)
+                    listOf(SimpleGrantedAuthority("ROLE_ADMIN"), SimpleGrantedAuthority("ROLE_USER"))
+                else
+                    listOf(SimpleGrantedAuthority("ROLE_USER"))
                 val auth = UsernamePasswordAuthenticationToken(
                     principal,
                     null,
-                    listOf(SimpleGrantedAuthority("ROLE_USER")),
+                    authorities,
                 )
                 SecurityContextHolder.getContext().authentication = auth
             }

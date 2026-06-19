@@ -1,5 +1,7 @@
 scalar DateTime
 
+enum UserRole { USER ADMIN }
+
 enum PostType {
     REGULAR
     CROWDFUNDING
@@ -153,6 +155,9 @@ type Query {
     crowdfunding(id: ID!): Crowdfunding
     # 내가 개설하거나 후원한 크라우드펀딩 (최신순).
     myCrowdfundings(limit: Int! = 20, offset: Int! = 0): [Crowdfunding!]!
+
+    # 관리자 전용 — RBAC 검증용 핑.
+    adminPing: String!
 }
 
 type ReceiptAnalysis {
@@ -394,6 +399,7 @@ type User {
     followerCount: Int!
     followingCount: Int!
     privateAccount: Boolean!
+    role: UserRole!
     viewerIsFollowing: Boolean!
     # 내가 이 사용자에게 follow request를 보냈고 아직 응답 대기 중인지
     viewerHasRequestedFollow: Boolean!
