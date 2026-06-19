@@ -1,0 +1,245 @@
+{
+  "uid": "mysns-golden",
+  "title": "mysns / golden signals",
+  "tags": ["mysns"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Total RPS",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{app=\"mysns\"}[1m]))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 1 } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Error rate (5xx)",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{app=\"mysns\", status=~\"5..\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{app=\"mysns\"}[5m])), 0.001)", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.01 }, { "color": "red", "value": 0.05 } ] }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Latency p95",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{app=\"mysns\"}[5m])))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 1 } ] }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Latency p99",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{app=\"mysns\"}[5m])))", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "value", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 2 } ] }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Heap 사용률",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum(jvm_memory_used_bytes{app=\"mysns\", area=\"heap\"}) / clamp_min(sum(jvm_memory_max_bytes{app=\"mysns\", area=\"heap\"}), 1)", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 0.75 }, { "color": "red", "value": 0.9 } ] }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "앱 상태",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "max(up{job=\"mysns-be\"})", "refId": "A" }
+      ],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "mappings": [ { "type": "value", "options": { "0": { "text": "DOWN", "color": "red", "index": 0 }, "1": { "text": "UP", "color": "green", "index": 1 } } } ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 1 } ] }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Request rate by status",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum by (status) (rate(http_server_requests_seconds_count{app=\"mysns\"}[1m]))", "legendFormat": "{{status}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "stacking": { "mode": "normal" } } } }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Latency p50 / p95 / p99",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_requests_seconds_bucket{app=\"mysns\"}[5m])))", "legendFormat": "p50", "refId": "A" },
+        { "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{app=\"mysns\"}[5m])))", "legendFormat": "p95", "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{app=\"mysns\"}[5m])))", "legendFormat": "p99", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Error rate (4xx / 5xx)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum(rate(http_server_requests_seconds_count{app=\"mysns\", status=~\"4..\"}[5m]))", "legendFormat": "4xx", "refId": "A" },
+        { "expr": "sum(rate(http_server_requests_seconds_count{app=\"mysns\", status=~\"5..\"}[5m]))", "legendFormat": "5xx", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Throughput by endpoint (top 10)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "topk(10, sum by (uri) (rate(http_server_requests_seconds_count{app=\"mysns\"}[5m])))", "legendFormat": "{{uri}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Top endpoints by traffic",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "topk(10, sum by (method, uri) (rate(http_server_requests_seconds_count{app=\"mysns\"}[5m])))", "format": "table", "instant": true, "refId": "A" }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "Value": "req/s", "uri": "endpoint", "method": "method" } } }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "decimals": 2 } }
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Slowest endpoints (p95)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "topk(10, histogram_quantile(0.95, sum by (uri, le) (rate(http_server_requests_seconds_bucket{app=\"mysns\"}[5m]))))", "format": "table", "instant": true, "refId": "A" }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { "excludeByName": { "Time": true }, "renameByName": { "Value": "p95", "uri": "endpoint" } } }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "decimals": 3 } }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "JVM heap used vs max",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum(jvm_memory_used_bytes{app=\"mysns\", area=\"heap\"})", "legendFormat": "heap used", "refId": "A" },
+        { "expr": "sum(jvm_memory_max_bytes{app=\"mysns\", area=\"heap\"})", "legendFormat": "heap max", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "CPU usage",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "process_cpu_usage{app=\"mysns\"}", "legendFormat": "process", "refId": "A" },
+        { "expr": "system_cpu_usage{app=\"mysns\"}", "legendFormat": "system", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "GC pause rate",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 28 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum by (action) (rate(jvm_gc_pause_seconds_count{app=\"mysns\"}[5m]))", "legendFormat": "{{action}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "DB connection pool (Hikari)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "sum(hikaricp_connections_active{app=\"mysns\"})", "legendFormat": "active", "refId": "A" },
+        { "expr": "sum(hikaricp_connections_idle{app=\"mysns\"})", "legendFormat": "idle", "refId": "B" },
+        { "expr": "sum(hikaricp_connections_pending{app=\"mysns\"})", "legendFormat": "pending", "refId": "C" },
+        { "expr": "sum(hikaricp_connections_max{app=\"mysns\"})", "legendFormat": "max", "refId": "D" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "JVM threads",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "VictoriaMetrics" },
+      "targets": [
+        { "expr": "jvm_threads_live_threads{app=\"mysns\"}", "legendFormat": "live", "refId": "A" },
+        { "expr": "jvm_threads_daemon_threads{app=\"mysns\"}", "legendFormat": "daemon", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    }
+  ]
+}
