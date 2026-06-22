@@ -53,6 +53,10 @@ class SecurityConfig {
             http.authorizeHttpRequests {
                 it.requestMatchers("/graphql", "/graphiql/**").permitAll()
                 it.requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()
+                // SSE 스트림은 비동기 요청이라 AuthorizationFilter 가 async 디스패치에서 AccessDenied 를
+                // 던지면 ExceptionTranslationFilter 를 못 거치고 dispatcherServlet 까지 올라가 ERROR 스택으로
+                // 도배된다(특히 연결 유지 중 토큰 만료 시). permitAll 로 두고 인증은 컨트롤러에서 401 로 처리.
+                it.requestMatchers("/notifications/stream", "/events/stream").permitAll()
                 it.requestMatchers("/upload").authenticated()
                 // 본인이 업로드한 temp 폴더만 접근 가능 (path 의 userId 와 현재 사용자 비교) — 아래 공개 GET 보다 먼저 매칭.
                 it.requestMatchers("/uploads/temp/**").access(tempOwnerAuth())

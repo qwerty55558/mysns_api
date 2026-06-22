@@ -96,3 +96,16 @@ logging:
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
     org.hibernate.stat: DEBUG
+
+---
+# 운영(prod) 오버라이드: SQL 파라미터/쿼리 TRACE·DEBUG 로그는 Loki/디스크/RAM을 잡아먹으므로 WARN으로 낮춘다.
+# 로컬 개발에서는 위의 DEBUG/TRACE가 그대로 유지된다(N+1 가시성).
+spring:
+  config:
+    activate:
+      on-profile: prod
+logging:
+  level:
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    org.hibernate.stat: WARN
